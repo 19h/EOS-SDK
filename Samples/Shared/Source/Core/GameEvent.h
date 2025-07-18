@@ -64,6 +64,12 @@ enum class EGameEventType: unsigned char
 	/** User connect logged in */
 	UserConnectLoggedIn,
 
+	/** User connect token verified */
+	UserConnectIdTokenVerified,
+
+	/** User connect token verification failed */
+	UserConnectIdTokenVerificationFailed,
+
 	/** User connect auth expiring soon */
 	UserConnectAuthExpiration,
 

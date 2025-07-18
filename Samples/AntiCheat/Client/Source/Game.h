@@ -6,6 +6,7 @@
 
 class FAntiCheatClient;
 class FAntiCheatNetworkTransport;
+class FAntiCheatP2PNetworkTransport;
 
 /**
 * Main game class
@@ -63,10 +64,16 @@ public:
 	 */
 	const std::unique_ptr<FAntiCheatNetworkTransport>& GetAntiCheatNetworkTransport();
 
+	/** 
+	 * Getter for Anti-Cheat P2P Network Transport component.
+	 */
+	const std::unique_ptr<FAntiCheatP2PNetworkTransport>& GetAntiCheatP2PNetworkTransport();
+
 protected:
 	/** Anti-Cheat Client component */
 	std::unique_ptr<FAntiCheatClient> AntiCheatClient;
 
 	/** Anti-Cheat Network Transport component */
 	std::unique_ptr<FAntiCheatNetworkTransport> AntiCheatNetworkTransport;
+	std::unique_ptr<FAntiCheatP2PNetworkTransport> AntiCheatP2PNetworkTransport;
 };

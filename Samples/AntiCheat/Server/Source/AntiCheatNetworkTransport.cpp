@@ -4,7 +4,7 @@
 #include "AntiCheatNetworkTransport.h"
 
 FAntiCheatNetworkTransport::FAntiCheatNetworkTransport()
-	: TCPClient(10, 4096)
+	: TCPClient(10, 64 * 1024)
 {
 	TCPClient.SetOnBufferReceivedCallback([this](void* From, char* Buffer, size_t Length) { Receive(From, Buffer, Length); });
 	TCPClient.SetOnClientDisconnectedCallback([this](void* Which) { OnClientDisconnectedCallback(Which); });

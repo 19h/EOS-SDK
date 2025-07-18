@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "pch.h"
-
+#include "DebugLog.h"
 #include "AntiCheatNetworkTransport.h"
 
 FAntiCheatNetworkTransport::FAntiCheatNetworkTransport(): TCPClient(4096)
@@ -36,17 +36,26 @@ void FAntiCheatNetworkTransport::SetOnClientActionRequiredCallback(FOnClientActi
 
 void FAntiCheatNetworkTransport::Send(const EOS_AntiCheatClient_OnMessageToServerCallbackInfo* Message)
 {
-	char Buffer[4096] = {};
+	constexpr uint32_t MaxMessageSize = 4096;
+	char Buffer[MaxMessageSize] = {};
 	size_t BufferPos = {};
 
 	constexpr FMessageType MessageType = FMessageType::Opaque;
 	const uint32_t MessageLength = Message->MessageDataSizeBytes;
 
-	Write(MessageType, Buffer, BufferPos);
-	Write(MessageLength, Buffer, BufferPos);
-	Write(Message->MessageData, Message->MessageDataSizeBytes, Buffer, BufferPos);
+	const uint32_t TotalMessageSize = sizeof(MessageType) + sizeof(MessageLength) + Message->MessageDataSizeBytes;
+	if (TotalMessageSize <= MaxMessageSize)
+	{
+		Write(MessageType, Buffer, BufferPos);
+		Write(MessageLength, Buffer, BufferPos);
+		Write(Message->MessageData, Message->MessageDataSizeBytes, Buffer, BufferPos);
 
-	TCPClient.Send(Buffer, BufferPos);
+		TCPClient.Send(Buffer, BufferPos);
+	}
+	else
+	{
+		FDebugLog::LogError(L"Unexpected message size: %u.", TotalMessageSize);
+	}
 }
 
 void FAntiCheatNetworkTransport::Send(const FRegistrationInfoMessage& Message)
@@ -57,6 +66,7 @@ void FAntiCheatNetworkTransport::Send(const FRegistrationInfoMessage& Message)
 	constexpr FMessageType MessageType = FMessageType::RegistrationInfo;
 	const uint32_t MessageLength = 
 		static_cast<uint32_t>(Message.ProductUserId.size() + 1) +
+		static_cast<uint32_t>(Message.EOSConnectIdTokenJWT.size() + 1) +
 		sizeof(Message.ClientPlatform);
 
 	Write(MessageType, Buffer, BufferPos);

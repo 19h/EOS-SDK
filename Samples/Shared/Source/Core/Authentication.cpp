@@ -528,6 +528,34 @@ std::string FAuthentication::GetConnectIdToken(EOS_ProductUserId LocalUserId)
 	return IdTokenString;
 }
 
+void FAuthentication::VerifyConnectIdToken(EOS_ProductUserId ExpectedUserId, const char* ConnectIdTokenJWT)
+{
+	EOS_Connect_IdToken Token = {};
+	Token.ApiVersion = EOS_CONNECT_IDTOKEN_API_LATEST;
+	Token.ProductUserId = ExpectedUserId;
+	Token.JsonWebToken = ConnectIdTokenJWT;
+
+	EOS_Connect_VerifyIdTokenOptions Options = {};
+	Options.ApiVersion = EOS_CONNECT_VERIFYIDTOKEN_API_LATEST;
+	Options.IdToken = &Token;
+
+	EOS_Connect_VerifyIdToken(ConnectHandle, &Options, NULL, VerifyConnectIdTokenCompleteCallbackFn);
+}
+
+void EOS_CALL FAuthentication::VerifyConnectIdTokenCompleteCallbackFn(const EOS_Connect_VerifyIdTokenCallbackInfo* Data)
+{
+	if (Data->ResultCode == EOS_EResult::EOS_Success)
+	{
+		FGameEvent Event(EGameEventType::UserConnectIdTokenVerified, FProductUserId(Data->ProductUserId));
+		FGame::Get().OnGameEvent(Event);
+	}
+	else
+	{
+		FGameEvent Event(EGameEventType::UserConnectIdTokenVerificationFailed, FProductUserId(Data->ProductUserId));
+		FGame::Get().OnGameEvent(Event);
+	}
+}
+
 void FAuthentication::DeletePersistentAuth()
 {
 	if (!FPlatform::IsInitialized())

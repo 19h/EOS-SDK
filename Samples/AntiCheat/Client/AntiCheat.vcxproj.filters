@@ -304,6 +304,8 @@
     <ClInclude Include="..\..\Shared\Source\BaseMenu.h">
       <Filter>SharedSource</Filter>
     </ClInclude>
+    <ClInclude Include="Source\AntiCheatP2PNetworkTransport.h" />
+    <ClInclude Include="Source\RemoteConnection.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="EOSSDK">
@@ -527,6 +529,7 @@
     <ClCompile Include="..\..\Shared\Source\BaseMenu.cpp">
       <Filter>SharedSource</Filter>
     </ClCompile>
+    <ClCompile Include="Source\AntiCheatP2PNetworkTransport.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Source\game.ico">

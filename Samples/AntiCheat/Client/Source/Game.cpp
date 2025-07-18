@@ -6,6 +6,7 @@
 #include "Game.h"
 #include "AntiCheatClient.h"
 #include "AntiCheatNetworkTransport.h"
+#include "AntiCheatP2PNetworkTransport.h"
 #include "Authentication.h"
 
 FGame::FGame() noexcept(false) :
@@ -14,6 +15,7 @@ FGame::FGame() noexcept(false) :
 	Menu = std::make_unique<FMenu>(Console);
 	Level = std::make_unique<FLevel>();
 	AntiCheatNetworkTransport = std::make_unique<FAntiCheatNetworkTransport>();
+	AntiCheatP2PNetworkTransport = std::make_unique<FAntiCheatP2PNetworkTransport>();
 	AntiCheatClient = std::make_unique<FAntiCheatClient>();
 
 	CreateConsoleCommands();
@@ -37,6 +39,7 @@ void FGame::Update()
 	FBaseGame::Update();
 
 	AntiCheatNetworkTransport->Update();
+	AntiCheatP2PNetworkTransport->Update();
 }
 
 void FGame::OnShutdown()
@@ -48,6 +51,7 @@ void FGame::OnShutdown()
 
 void FGame::OnGameEvent(const FGameEvent& Event)
 {
+	AntiCheatClient->OnGameEvent(Event);
 	FBaseGame::OnGameEvent(Event);
 }
 
@@ -59,4 +63,9 @@ const std::unique_ptr<FAntiCheatClient>& FGame::GetAntiCheatClient()
 const std::unique_ptr<FAntiCheatNetworkTransport>& FGame::GetAntiCheatNetworkTransport()
 {
 	return AntiCheatNetworkTransport;
+}
+
+const std::unique_ptr<FAntiCheatP2PNetworkTransport>& FGame::GetAntiCheatP2PNetworkTransport()
+{
+	return AntiCheatP2PNetworkTransport;
 }

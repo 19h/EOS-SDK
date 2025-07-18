@@ -52,11 +52,16 @@ public:
 	void ShowUI();
 	void HideUI();
 
+	void OnClientServerModeButtonPressed();
+	void OnP2PModeButtonPressed();
 	void OnJoinGameButtonPressed();
 	void OnLeaveGameButtonPressed();
-	void OnPollStatusButtonPressed();
+	void OnRegisterPeerButtonPressed();
+	void OnUnregisterPeerButtonPressed();
 
 private:
+	
+	bool bIsP2P = false;
 
 	void LeaveGame();
 
@@ -69,14 +74,26 @@ private:
 	/** Part of window that console is taking */
 	Vector2 ConsoleWindowProportion;
 
+	std::shared_ptr<FButtonWidget> ClientServerModeButton;
+	std::shared_ptr<FButtonWidget> P2PModeButton;
+
 	/** Join Game button */
 	std::shared_ptr<FButtonWidget> JoinGameButton;
 
 	/** Leave Game button */
 	std::shared_ptr<FButtonWidget> LeaveGameButton;
 
-	/** Poll Status button */
-	std::shared_ptr<FButtonWidget> PollStatusButton;
+	std::shared_ptr<FButtonWidget> RegisterPeerButton;
+	std::shared_ptr<FButtonWidget> UnregisterPeerButton;
+
+	/** Mode label */
+	std::shared_ptr<FTextLabelWidget> ModeLabel;
+
+	/** Listen port label */
+	std::shared_ptr<FTextLabelWidget> ListenPortLabel;
+	
+	/** Listen port field */
+	std::shared_ptr<FTextFieldWidget> ListenPortField;
 
 	/** IP (Host) label */
 	std::shared_ptr<FTextLabelWidget> IPLabel;

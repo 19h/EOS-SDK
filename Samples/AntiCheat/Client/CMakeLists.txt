@@ -190,6 +190,7 @@ set(SOURCES
 	Source/AntiCheatClient.cpp
 	Source/AntiCheatDialog.cpp
 	Source/AntiCheatNetworkTransport.cpp
+	Source/AntiCheatP2PNetworkTransport.cpp
 	Source/TCPClient.cpp
 )
 

@@ -40,6 +40,63 @@ FAntiCheatDialog::FAntiCheatDialog(
 		Layer,
 		L"Assets/texteditor.dds");
 
+	ModeLabel = std::make_shared<FTextLabelWidget>(
+		Vector2(50.f, 50.f),
+		Vector2(100.f, 30.f),
+		Layer - 1,
+		L"Mode:",
+		L"");
+	ModeLabel->SetFont(DialogNormalFont);
+
+	ClientServerModeButton = std::make_shared<FButtonWidget>(
+		Vector2(0.f, 0.f),
+		Vector2(0, 0.f),
+		Layer - 1,
+		L"ClientServer",
+		assets::DefaultButtonAssets,
+		DialogNormalFont,
+		Color::UIButtonBlue
+	);
+	ClientServerModeButton->SetBackgroundColors(assets::DefaultButtonColors);
+	ClientServerModeButton->SetOnPressedCallback([this]()
+	{
+		OnClientServerModeButtonPressed();
+	});
+
+	P2PModeButton = std::make_shared<FButtonWidget>(
+		Vector2(0.f, 0.f),
+		Vector2(0, 0.f),
+		Layer - 1,
+		L"P2P",
+		assets::DefaultButtonAssets,
+		DialogNormalFont,
+		Color::UIButtonBlue
+	);
+	P2PModeButton->SetBackgroundColors(assets::DefaultButtonColors);
+	P2PModeButton->SetOnPressedCallback([this]()
+	{
+		OnP2PModeButtonPressed();
+	});
+
+	ListenPortLabel = std::make_shared<FTextLabelWidget>(
+		Vector2(50.f, 50.f),
+		Vector2(100.f, 30.f),
+		Layer - 1,
+		L"Listen Port:",
+		L"");
+	ListenPortLabel->SetFont(DialogNormalFont);
+
+	ListenPortField = std::make_shared<FTextFieldWidget>(
+		Vector2(50.f, 50.f),
+		Vector2(150.f, 30.f),
+		Layer - 1,
+		L"1234",
+		L"Assets/textfield.dds",
+		DialogNormalFont,
+		FTextFieldWidget::EInputType::Normal,
+		EAlignmentType::Left);
+	ListenPortField->SetBorderColor(Color::UIBorderGrey);
+
 	IPLabel = std::make_shared<FTextLabelWidget>(
 		Vector2(50.f, 50.f),
 		Vector2(100.f, 30.f),
@@ -60,7 +117,7 @@ FAntiCheatDialog::FAntiCheatDialog(
 		Vector2(0.f, 0.f),
 		Vector2(0, 0.f),
 		Layer - 1,
-		L"JOIN GAME",
+		L"JOIN GAME SERVER",
 		assets::DefaultButtonAssets,
 		DialogNormalFont,
 		Color::UIButtonBlue
@@ -75,7 +132,7 @@ FAntiCheatDialog::FAntiCheatDialog(
 		Vector2(0.f, 0.f),
 		Vector2(0, 0.f),
 		Layer - 1,
-		L"LEAVE GAME",
+		L"LEAVE GAME SERVER",
 		assets::DefaultButtonAssets,
 		DialogNormalFont,
 		Color::UIButtonBlue
@@ -87,21 +144,21 @@ FAntiCheatDialog::FAntiCheatDialog(
 	});
 	LeaveGameButton->Disable();
 
-	PollStatusButton = std::make_shared<FButtonWidget>(
+	RegisterPeerButton = std::make_shared<FButtonWidget>(
 		Vector2(0.f, 0.f),
 		Vector2(0, 0.f),
 		Layer - 1,
-		L"POLL STATUS",
+		L"REGISTER PEER",
 		assets::DefaultButtonAssets,
 		DialogNormalFont,
 		Color::UIButtonBlue
-		);
-	PollStatusButton->SetBackgroundColors(assets::DefaultButtonColors);
-	PollStatusButton->SetOnPressedCallback([this]()
+	);
+	RegisterPeerButton->SetBackgroundColors(assets::DefaultButtonColors);
+	RegisterPeerButton->SetOnPressedCallback([this]()
 	{
-		OnPollStatusButtonPressed();
+		OnRegisterPeerButtonPressed();
 	});
-	PollStatusButton->Disable();
+	RegisterPeerButton->Disable();
 
 	IPField = std::make_shared<FTextFieldWidget>(
 		Vector2(50.f, 50.f),
@@ -146,21 +203,31 @@ void FAntiCheatDialog::Create()
 {
 	if (HeaderLabel) HeaderLabel->Create();
 	if (BackgroundImage) BackgroundImage->Create();
+	if (ClientServerModeButton) ClientServerModeButton->Create();
+	if (P2PModeButton) P2PModeButton->Create();
 	if (JoinGameButton) JoinGameButton->Create();
 	if (LeaveGameButton) JoinGameButton->Create();
-	if (PollStatusButton) PollStatusButton->Create();
+	if (RegisterPeerButton) RegisterPeerButton->Create();
+	if (ModeLabel) ModeLabel->Create();
 	if (IPLabel) IPLabel->Create();
 	if (IPField) IPField->Create();
+	if (ListenPortLabel) ListenPortLabel->Create();
+	if (ListenPortField) ListenPortField->Create();
 	if (PortLabel) PortLabel->Create();
 	if (PortField) PortField->Create();
 
 	AddWidget(HeaderLabel);
 	AddWidget(BackgroundImage);
+	AddWidget(ClientServerModeButton);
+	AddWidget(P2PModeButton);
 	AddWidget(JoinGameButton);
 	AddWidget(LeaveGameButton);
-	AddWidget(PollStatusButton);
+	AddWidget(RegisterPeerButton);
+	AddWidget(ModeLabel);
 	AddWidget(IPLabel);
 	AddWidget(IPField);
+	AddWidget(ListenPortLabel);
+	AddWidget(ListenPortField);
 	AddWidget(PortLabel);
 	AddWidget(PortField);
 }
@@ -171,13 +238,18 @@ void FAntiCheatDialog::SetPosition(Vector2 Pos)
 
 	if (HeaderLabel) HeaderLabel->SetPosition(Pos);
 	if (BackgroundImage) BackgroundImage->SetPosition(Vector2(Position.x, Position.y));
-	if (IPLabel) IPLabel->SetPosition(Pos + Vector2(0.f, 80.f));
-	if (IPField) IPField->SetPosition(Pos + Vector2(90.f, 80.f));
-	if (PortLabel) PortLabel->SetPosition(Pos + Vector2(0.f, 120.f));
-	if (PortField) PortField->SetPosition(Pos + Vector2(90.f, 120.f));
+	if (ModeLabel) ModeLabel->SetPosition(Pos + Vector2(0.f, 40.f));
+	if (ClientServerModeButton) ClientServerModeButton->SetPosition(ModeLabel->GetPosition() + Vector2(90.f, 0.f));
+	if (P2PModeButton) P2PModeButton->SetPosition(ModeLabel->GetPosition() + Vector2(190.f, 0.f));
+	if (ListenPortLabel) ListenPortLabel->SetPosition(Pos + Vector2(0.f, 80.f));
+	if (ListenPortField) ListenPortField->SetPosition(Pos + Vector2(90.f, 80.f));
+	if (IPLabel) IPLabel->SetPosition(Pos + Vector2(0.f, 120.f));
+	if (IPField) IPField->SetPosition(Pos + Vector2(90.f, 120.f));
+	if (PortLabel) PortLabel->SetPosition(Pos + Vector2(0.f, 160.f));
+	if (PortField) PortField->SetPosition(Pos + Vector2(90.f, 160.f));
 	if (JoinGameButton) JoinGameButton->SetPosition(PortLabel->GetPosition() + Vector2(35.f, 60.f));
 	if (LeaveGameButton) LeaveGameButton->SetPosition(JoinGameButton->GetPosition() + Vector2(0.f, 40.f));
-	if (PollStatusButton) PollStatusButton->SetPosition(LeaveGameButton->GetPosition() + Vector2(0.f, 80.f));
+	if (RegisterPeerButton) RegisterPeerButton->SetPosition(LeaveGameButton->GetPosition() + Vector2(0.f, 40.f));
 }
 
 void FAntiCheatDialog::SetSize(Vector2 NewSize)
@@ -186,17 +258,28 @@ void FAntiCheatDialog::SetSize(Vector2 NewSize)
 
 	if (HeaderLabel) HeaderLabel->SetSize(Vector2(NewSize.x, HeaderLabelHeight));
 	if (BackgroundImage) BackgroundImage->SetSize(Vector2(NewSize.x, NewSize.y));
+	if (ClientServerModeButton) ClientServerModeButton->SetSize(Vector2(90.f, 30.f));
+	if (P2PModeButton) P2PModeButton->SetSize(Vector2(40.f, 30.f));
 	if (JoinGameButton) JoinGameButton->SetSize(Vector2(220.f, 30.f));
 	if (LeaveGameButton) LeaveGameButton->SetSize(Vector2(220.f, 30.f));
-	if (PollStatusButton) PollStatusButton->SetSize(Vector2(220.f, 30.f));
+	if (RegisterPeerButton) RegisterPeerButton->SetSize(Vector2(220.f, 30.f));
+	if (ModeLabel) ModeLabel->SetSize(Vector2(100.f, 30.f));
 	if (IPLabel) IPLabel->SetSize(Vector2(100.f, 30.f));
 	if (IPField) IPField->SetSize(Vector2(160.f, 30.f));
+	if (ListenPortLabel) ListenPortLabel->SetSize(Vector2(100.f, 30.f));
+	if (ListenPortField) ListenPortField->SetSize(Vector2(160.f, 30.f));
 	if (PortLabel) PortLabel->SetSize(Vector2(100.f, 30.f));
 	if (PortField) PortField->SetSize(Vector2(160.f, 30.f));
 }
 
 void FAntiCheatDialog::ShowUI()
 {
+	if (ModeLabel)
+	{
+		ModeLabel->Enable();
+		ModeLabel->Show();
+	}
+
 	if (IPLabel)
 	{
 		IPLabel->Enable();
@@ -207,6 +290,16 @@ void FAntiCheatDialog::ShowUI()
 	{
 		IPField->Enable();
 		IPField->Show();
+	}
+
+	if (ListenPortLabel)
+	{
+		ListenPortLabel->Enable();
+	}
+
+	if (ListenPortField)
+	{
+		ListenPortField->Enable();
 	}
 
 	if (PortLabel)
@@ -221,6 +314,16 @@ void FAntiCheatDialog::ShowUI()
 		PortField->Show();
 	}
 
+	if (ClientServerModeButton)
+	{
+		ClientServerModeButton->Show();
+	}
+
+	if (P2PModeButton)
+	{
+		P2PModeButton->Show();
+	}
+
 	if (JoinGameButton)
 	{
 		JoinGameButton->Show();
@@ -231,14 +334,22 @@ void FAntiCheatDialog::ShowUI()
 		LeaveGameButton->Show();
 	}
 
-	if (PollStatusButton)
+	if (!FGame::Get().GetAntiCheatClient()->IsInitialized())
 	{
-		PollStatusButton->Show();
+		ClientServerModeButton->Disable();
+		P2PModeButton->Disable();
+		JoinGameButton->Disable();
+		LeaveGameButton->Disable();
 	}
 }
 
 void FAntiCheatDialog::HideUI()
 {
+	if (ModeLabel)
+	{
+		ModeLabel->Hide();
+	}
+
 	if (IPLabel)
 	{
 		IPLabel->Hide();
@@ -248,6 +359,17 @@ void FAntiCheatDialog::HideUI()
 	{
 		IPField->Disable();
 		IPField->Hide();
+	}
+
+	if (ListenPortLabel)
+	{
+		ListenPortLabel->Hide();
+	}
+
+	if (ListenPortField)
+	{
+		ListenPortField->Disable();
+		ListenPortField->Hide();
 	}
 
 	if (PortLabel)
@@ -261,6 +383,16 @@ void FAntiCheatDialog::HideUI()
 		PortField->Hide();
 	}
 
+	if (ClientServerModeButton)
+	{
+		ClientServerModeButton->Hide();
+	}
+
+	if (P2PModeButton)
+	{
+		P2PModeButton->Hide();
+	}
+
 	if (JoinGameButton)
 	{
 		JoinGameButton->Hide();
@@ -271,9 +403,9 @@ void FAntiCheatDialog::HideUI()
 		LeaveGameButton->Hide();
 	}
 
-	if (PollStatusButton)
+	if (RegisterPeerButton)
 	{
-		PollStatusButton->Hide();
+		RegisterPeerButton->Hide();
 	}
 
 	SetFocused(false);
@@ -317,6 +449,27 @@ void FAntiCheatDialog::OnGameEvent(const FGameEvent& Event)
 	}
 }
 
+void FAntiCheatDialog::OnClientServerModeButtonPressed()
+{
+	ListenPortLabel->Hide();
+	ListenPortField->Hide();
+	JoinGameButton->SetText(L"JOIN GAME SERVER");
+	LeaveGameButton->SetText(L"LEAVE GAME SERVER");
+	RegisterPeerButton->Disable();
+	RegisterPeerButton->Hide();
+	bIsP2P = false;
+}
+
+void FAntiCheatDialog::OnP2PModeButtonPressed()
+{
+	ListenPortLabel->Show();
+	ListenPortField->Show();
+	RegisterPeerButton->Show();
+	JoinGameButton->SetText(L"START P2P SESSION");
+	LeaveGameButton->SetText(L"END P2P SESSION");
+	bIsP2P = true;
+}
+
 void FAntiCheatDialog::OnJoinGameButtonPressed()
 {
 	const PlayerPtr Player = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser());
@@ -325,9 +478,6 @@ void FAntiCheatDialog::OnJoinGameButtonPressed()
 		FDebugLog::LogError(L"AntiCheatDialog - OnJoinGameButtonPressed: Current player is invalid!");
 		return;
 	}
-
-	const std::string IP = FStringUtils::Narrow(IPField->GetText());
-	const int Port = std::stoi(PortField->GetText());
 
 	// Get a Connect ID Token which will be sent to the server as part of the registration message.
 	EOS_ProductUserId ProductUserId = Player->GetProductUserID();
@@ -338,16 +488,46 @@ void FAntiCheatDialog::OnJoinGameButtonPressed()
 		return;
 	}
 
-	const bool bDidSessionBegin = FGame::Get().GetAntiCheatClient()->Start(IP, Port, Player->GetProductUserID(), ConnectIdToken.c_str());
-	if (bDidSessionBegin)
+	if (bIsP2P)
 	{
-		JoinGameButton->Disable();
-		JoinGameButton->SetFocused(false);
+		if (FGame::Get().GetAntiCheatClient()->StartP2P(std::stoi(ListenPortField->GetText()), ProductUserId, ConnectIdToken.c_str()))
+		{
+			ClientServerModeButton->Disable();
+			ClientServerModeButton->SetFocused(false);
 
-		LeaveGameButton->Enable();
-		LeaveGameButton->SetFocused(true);
+			P2PModeButton->Disable();
+			P2PModeButton->SetFocused(false);
 
-		PollStatusButton->Enable();
+			JoinGameButton->Disable();
+			JoinGameButton->SetFocused(false);
+
+			LeaveGameButton->Enable();
+
+			RegisterPeerButton->Enable();
+			RegisterPeerButton->SetFocused(true);
+
+		}
+	}
+	else
+	{
+		const std::string IP = FStringUtils::Narrow(IPField->GetText());
+		const int Port = std::stoi(PortField->GetText());
+
+		const bool bDidSessionBegin = FGame::Get().GetAntiCheatClient()->Start(IP, Port, Player->GetProductUserID(), ConnectIdToken.c_str());
+		if (bDidSessionBegin)
+		{
+			ClientServerModeButton->Disable();
+			ClientServerModeButton->SetFocused(false);
+
+			P2PModeButton->Disable();
+			P2PModeButton->SetFocused(false);
+
+			JoinGameButton->Disable();
+			JoinGameButton->SetFocused(false);
+
+			LeaveGameButton->Enable();
+			LeaveGameButton->SetFocused(true);
+		}
 	}
 }
 
@@ -356,20 +536,33 @@ void FAntiCheatDialog::OnLeaveGameButtonPressed()
 	LeaveGame();	
 }
 
-void FAntiCheatDialog::OnPollStatusButtonPressed()
+void FAntiCheatDialog::OnRegisterPeerButtonPressed()
 {
-	FGame::Get().GetAntiCheatClient()->PollStatus();
+	const std::string IP = FStringUtils::Narrow(IPField->GetText());
+	const int Port = std::stoi(PortField->GetText());
+	FGame::Get().GetAntiCheatClient()->ConnectP2PPeer(IP, Port);
 }
 
 void FAntiCheatDialog::LeaveGame()
 {
-	FGame::Get().GetAntiCheatClient()->Stop();
+	if (bIsP2P)
+	{
+		FGame::Get().GetAntiCheatClient()->StopP2P();
+	}
+	else
+	{
+		FGame::Get().GetAntiCheatClient()->Stop();
+	}
+
+	ClientServerModeButton->Enable();
+	P2PModeButton->Enable();
 
 	LeaveGameButton->Disable();
 	LeaveGameButton->SetFocused(false);
 
-	PollStatusButton->Disable();
-
 	JoinGameButton->Enable();
 	JoinGameButton->SetFocused(true);
+
+	RegisterPeerButton->Disable();
+	RegisterPeerButton->SetFocused(false);
 }

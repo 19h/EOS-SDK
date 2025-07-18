@@ -515,9 +515,11 @@ xcopy /D /Y /R /Q ..\$(EOSSDKSamplesRoot)\Shared\External\SDL2\SDL2_net\lib\x64\
 	<ClInclude Include="Source\AntiCheatClient.h" />
 	<ClInclude Include="Source\AntiCheatDialog.h" />
 	<ClInclude Include="Source\AntiCheatNetworkTransport.h" />
+    <ClInclude Include="Source\AntiCheatP2PNetworkTransport.h" />
     <ClInclude Include="Source\Game.h" />
     <ClInclude Include="Source\Level.h" />
     <ClInclude Include="Source\Menu.h" />
+    <ClInclude Include="Source\RemoteConnection.h" />
     <ClInclude Include="Source\SampleConstants.h" />
 	<ClInclude Include="Source\TCPClient.h" />
   </ItemGroup>
@@ -590,6 +592,7 @@ xcopy /D /Y /R /Q ..\$(EOSSDKSamplesRoot)\Shared\External\SDL2\SDL2_net\lib\x64\
 	<ClCompile Include="Source\AntiCheatClient.cpp" />
 	<ClCompile Include="Source\AntiCheatDialog.cpp" />
 	<ClCompile Include="Source\AntiCheatNetworkTransport.cpp" />
+    <ClCompile Include="Source\AntiCheatP2PNetworkTransport.cpp" />
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\Menu.cpp" />
 	<ClCompile Include="Source\TCPClient.cpp" />
