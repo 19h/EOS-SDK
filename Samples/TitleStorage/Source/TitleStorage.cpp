@@ -40,7 +40,7 @@ void FTitleStorage::QueryList()
 
 	EOS_HTitleStorage TitleStorageHandle = EOS_Platform_GetTitleStorageInterface(FPlatform::GetPlatformHandle());
 	EOS_TitleStorage_QueryFileListOptions Options = {};
-	Options.ApiVersion = EOS_TITLESTORAGE_QUERYFILELISTOPTIONS_API_LATEST;
+	Options.ApiVersion = EOS_TITLESTORAGE_QUERYFILELIST_API_LATEST;
 	Options.LocalUserId = Player->GetProductUserID();
 	
 	Options.ListOfTagsCount = int32_t(CurrentTags.size());
@@ -65,7 +65,7 @@ void FTitleStorage::StartFileDataDownload(const std::wstring& FileName)
 	//TODO: make sure we are not transferring the same file atm
 	EOS_HTitleStorage TitleStorageHandle = EOS_Platform_GetTitleStorageInterface(FPlatform::GetPlatformHandle());
 	EOS_TitleStorage_ReadFileOptions Options = {};
-	Options.ApiVersion = EOS_TITLESTORAGE_READFILEOPTIONS_API_LATEST;
+	Options.ApiVersion = EOS_TITLESTORAGE_READFILE_API_LATEST;
 	Options.LocalUserId = Player->GetProductUserID();
 	std::string NarrowFileName = FStringUtils::Narrow(FileName);
 	Options.Filename = NarrowFileName.c_str();
@@ -375,7 +375,7 @@ void EOS_CALL FTitleStorage::OnFileListRetrieved(const EOS_TitleStorage_QueryFil
 			for (size_t FileIndex = 0; FileIndex < FileCount; ++FileIndex)
 			{
 				EOS_TitleStorage_CopyFileMetadataAtIndexOptions Options = {};
-				Options.ApiVersion = EOS_TITLESTORAGE_COPYFILEMETADATAATINDEXOPTIONS_API_LATEST;
+				Options.ApiVersion = EOS_TITLESTORAGE_COPYFILEMETADATAATINDEX_API_LATEST;
 
 				Options.LocalUserId = Player->GetProductUserID();
 				Options.Index = static_cast<uint32_t>(FileIndex);

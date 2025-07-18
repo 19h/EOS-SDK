@@ -32,8 +32,8 @@ void FPlayerDataStorage::QueryList()
 	}
 
 	EOS_HPlayerDataStorage PlayerStorageHandle = EOS_Platform_GetPlayerDataStorageInterface(FPlatform::GetPlatformHandle());
-	EOS_PlayerDataStorage_QueryFileListOptions Options;
-	Options.ApiVersion = EOS_PLAYERDATASTORAGE_QUERYFILELISTOPTIONS_API_LATEST;
+	EOS_PlayerDataStorage_QueryFileListOptions Options = {};
+	Options.ApiVersion = EOS_PLAYERDATASTORAGE_QUERYFILELIST_API_LATEST;
 	Options.LocalUserId = Player->GetProductUserID();
 	EOS_PlayerDataStorage_QueryFileList(PlayerStorageHandle, &Options, nullptr, OnFileListRetrieved);
 }
@@ -48,8 +48,8 @@ void FPlayerDataStorage::StartFileDataDownload(const std::wstring& FileName)
 
 	//TODO: make sure we are not transferring the same file atm
 	EOS_HPlayerDataStorage PlayerStorageHandle = EOS_Platform_GetPlayerDataStorageInterface(FPlatform::GetPlatformHandle());
-	EOS_PlayerDataStorage_ReadFileOptions Options;
-	Options.ApiVersion = EOS_PLAYERDATASTORAGE_READFILEOPTIONS_API_LATEST;
+	EOS_PlayerDataStorage_ReadFileOptions Options = {};
+	Options.ApiVersion = EOS_PLAYERDATASTORAGE_READFILE_API_LATEST;
 	Options.LocalUserId = Player->GetProductUserID();
 	std::string NarrowFileName = FStringUtils::Narrow(FileName);
 	Options.Filename = NarrowFileName.c_str();
@@ -97,8 +97,8 @@ bool FPlayerDataStorage::StartFileDataUpload(const std::wstring& FileName)
 	const std::wstring& FileData = Iter->second.second;
 	
 	EOS_HPlayerDataStorage PlayerStorageHandle = EOS_Platform_GetPlayerDataStorageInterface(FPlatform::GetPlatformHandle());
-	EOS_PlayerDataStorage_WriteFileOptions Options;
-	Options.ApiVersion = EOS_PLAYERDATASTORAGE_WRITEFILEOPTIONS_API_LATEST;
+	EOS_PlayerDataStorage_WriteFileOptions Options = {};
+	Options.ApiVersion = EOS_PLAYERDATASTORAGE_WRITEFILE_API_LATEST;
 	Options.LocalUserId = Player->GetProductUserID();
 	std::string NarrowFileName = FStringUtils::Narrow(FileName);
 	Options.Filename = NarrowFileName.c_str();
@@ -198,8 +198,8 @@ void FPlayerDataStorage::CopyFile(const std::wstring& SourceFileName, const std:
 	}
 
 	EOS_HPlayerDataStorage PlayerStorageHandle = EOS_Platform_GetPlayerDataStorageInterface(FPlatform::GetPlatformHandle());
-	EOS_PlayerDataStorage_DuplicateFileOptions Options;
-	Options.ApiVersion = EOS_PLAYERDATASTORAGE_DUPLICATEFILEOPTIONS_API_LATEST;
+	EOS_PlayerDataStorage_DuplicateFileOptions Options = {};
+	Options.ApiVersion = EOS_PLAYERDATASTORAGE_DUPLICATEFILE_API_LATEST;
 	Options.LocalUserId = Player->GetProductUserID();
 	std::string NarrowSourceFileName = FStringUtils::Narrow(SourceFileName);
 	Options.SourceFilename = NarrowSourceFileName.c_str();
@@ -222,8 +222,8 @@ void FPlayerDataStorage::RemoveFile(const std::wstring& FileName)
 	EraseLocalData(FileName);
 
 	EOS_HPlayerDataStorage PlayerStorageHandle = EOS_Platform_GetPlayerDataStorageInterface(FPlatform::GetPlatformHandle());
-	EOS_PlayerDataStorage_DeleteFileOptions Options;
-	Options.ApiVersion = EOS_PLAYERDATASTORAGE_DELETEFILEOPTIONS_API_LATEST;
+	EOS_PlayerDataStorage_DeleteFileOptions Options = {};
+	Options.ApiVersion = EOS_PLAYERDATASTORAGE_DELETEFILE_API_LATEST;
 	Options.LocalUserId = Player->GetProductUserID();
 	std::string NarrowFileName = FStringUtils::Narrow(FileName);
 	Options.Filename = NarrowFileName.c_str();
@@ -564,7 +564,7 @@ void EOS_CALL FPlayerDataStorage::OnFileListRetrieved(const EOS_PlayerDataStorag
 			for (size_t FileIndex = 0; FileIndex < FileCount; ++FileIndex)
 			{
 				EOS_PlayerDataStorage_CopyFileMetadataAtIndexOptions Options;
-				Options.ApiVersion = EOS_PLAYERDATASTORAGE_COPYFILEMETADATAATINDEXOPTIONS_API_LATEST;
+				Options.ApiVersion = EOS_PLAYERDATASTORAGE_COPYFILEMETADATAATINDEX_API_LATEST;
 
 				Options.LocalUserId = Player->GetProductUserID();
 				Options.Index = static_cast<uint32_t>(FileIndex);

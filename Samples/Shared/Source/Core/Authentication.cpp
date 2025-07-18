@@ -581,7 +581,7 @@ void EOS_CALL FAuthentication::ConnectLoginCompleteCb(const EOS_Connect_LoginCal
 		EOS_HConnect ConnectHandle = EOS_Platform_GetConnectInterface(FPlatform::GetPlatformHandle());
 		assert(ConnectHandle != NULL);
 
-		EOS_Connect_CreateUserOptions Options;
+		EOS_Connect_CreateUserOptions Options = {};
 		Options.ApiVersion = EOS_CONNECT_CREATEUSER_API_LATEST;
 
 		if (Data->ContinuanceToken != NULL)

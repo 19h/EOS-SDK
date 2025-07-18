@@ -38,7 +38,7 @@ void FP2PNAT::RefreshNATType()
 {
 	EOS_HP2P P2PHandle = EOS_Platform_GetP2PInterface(FPlatform::GetPlatformHandle());
 
-	EOS_P2P_QueryNATTypeOptions Options;
+	EOS_P2P_QueryNATTypeOptions Options = {};
 	Options.ApiVersion = EOS_P2P_QUERYNATTYPE_API_LATEST;
 
 	EOS_P2P_QueryNATType(P2PHandle, &Options, nullptr, OnRefreshNATTypeFinished);
@@ -49,7 +49,7 @@ EOS_ENATType FP2PNAT::GetNATType() const
 	EOS_ENATType NATType = EOS_ENATType::EOS_NAT_Unknown;
 	EOS_HP2P P2PHandle = EOS_Platform_GetP2PInterface(FPlatform::GetPlatformHandle());
 
-	EOS_P2P_GetNATTypeOptions Options;
+	EOS_P2P_GetNATTypeOptions Options = {};
 	Options.ApiVersion = EOS_P2P_GETNATTYPE_API_LATEST;
 
 	EOS_EResult Result = EOS_P2P_GetNATType(P2PHandle, &Options, &NATType);
@@ -136,7 +136,7 @@ void FP2PNAT::SendMessage(FProductUserId FriendId, const std::wstring& Message)
 	SocketId.ApiVersion = EOS_P2P_SOCKETID_API_LATEST;
 	strncpy_s(SocketId.SocketName, "CHAT", 5);
 
-	EOS_P2P_SendPacketOptions Options;
+	EOS_P2P_SendPacketOptions Options = {};
 	Options.ApiVersion = EOS_P2P_SENDPACKET_API_LATEST;
 	Options.LocalUserId = Player->GetProductUserID();
 	Options.RemoteUserId = FriendId;
@@ -144,6 +144,7 @@ void FP2PNAT::SendMessage(FProductUserId FriendId, const std::wstring& Message)
 	Options.bAllowDelayedDelivery = EOS_TRUE;
 	Options.Channel = 0;
 	Options.Reliability = EOS_EPacketReliability::EOS_PR_ReliableOrdered;
+	Options.bDisableAutoAcceptConnection = EOS_FALSE;
 
 	std::string MessageNarrow = FStringUtils::Narrow(Message);
 
@@ -167,7 +168,7 @@ void FP2PNAT::HandleReceivedMessages()
 
 	EOS_HP2P P2PHandle = EOS_Platform_GetP2PInterface(FPlatform::GetPlatformHandle());
 
-	EOS_P2P_ReceivePacketOptions Options;
+	EOS_P2P_ReceivePacketOptions Options = {};
 	Options.ApiVersion = EOS_P2P_RECEIVEPACKET_API_LATEST;
 	Options.LocalUserId = Player->GetProductUserID();
 	Options.MaxDataSizeBytes = 4096;
@@ -224,7 +225,7 @@ void FP2PNAT::SubscribeToConnectionRequests()
 		SocketId.ApiVersion = EOS_P2P_SOCKETID_API_LATEST;
 		strncpy_s(SocketId.SocketName, "CHAT", 5);
 
-		EOS_P2P_AddNotifyPeerConnectionRequestOptions Options;
+		EOS_P2P_AddNotifyPeerConnectionRequestOptions Options = {};
 		Options.ApiVersion = EOS_P2P_ADDNOTIFYPEERCONNECTIONREQUEST_API_LATEST;
 		Options.LocalUserId = Player->GetProductUserID();
 		Options.SocketId = &SocketId;
@@ -261,7 +262,7 @@ void FP2PNAT::SubscribeToConnectionEstablished()
 		SocketId.ApiVersion = EOS_P2P_SOCKETID_API_LATEST;
 		strncpy_s(SocketId.SocketName, "CHAT", 5);
 
-		EOS_P2P_AddNotifyPeerConnectionEstablishedOptions Options;
+		EOS_P2P_AddNotifyPeerConnectionEstablishedOptions Options = {};
 		Options.ApiVersion = EOS_P2P_ADDNOTIFYPEERCONNECTIONESTABLISHED_API_LATEST;
 		Options.LocalUserId = Player->GetProductUserID();
 		Options.SocketId = &SocketId;
@@ -300,7 +301,7 @@ void EOS_CALL FP2PNAT::OnIncomingConnectionRequest(const EOS_P2P_OnIncomingConne
 		}
 		
 		EOS_HP2P P2PHandle = EOS_Platform_GetP2PInterface(FPlatform::GetPlatformHandle());
-		EOS_P2P_AcceptConnectionOptions Options;
+		EOS_P2P_AcceptConnectionOptions Options = {};
 		Options.ApiVersion = EOS_P2P_ACCEPTCONNECTION_API_LATEST;
 		Options.LocalUserId = Player->GetProductUserID();
 		Options.RemoteUserId = Data->RemoteUserId;
