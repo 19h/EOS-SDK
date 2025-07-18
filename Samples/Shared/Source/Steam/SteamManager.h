@@ -3,7 +3,6 @@
 #pragma once
 
 #ifdef EOS_STEAM_ENABLED
-struct EncryptedAppTicketResponse_t; 
 
 /**
 * Manages Steam API
@@ -11,20 +10,20 @@ struct EncryptedAppTicketResponse_t;
 class FSteamManager
 {
 	/**
-	* Constructor
-	*/
+	 * Constructor
+	 */
 	FSteamManager();
 
 	/**
-	* No copying or copy assignment allowed for this class.
-	*/
+	 * No copying or copy assignment allowed for this class.
+	 */
 	FSteamManager(FSteamManager const&) = delete;
 	FSteamManager& operator=(FSteamManager const&) = delete;
 
 public:
 	/**
-	* Destructor
-	*/
+	 * Destructor
+	 */
 	virtual ~FSteamManager();
 
 	static FSteamManager& GetInstance();
@@ -37,18 +36,18 @@ public:
 	void Update();
 
 	/**
-	 * Request an encrypted app ticket
+	 * Request an auth session ticket
 	 */
-	void RetrieveEncryptedAppTicket();
+	void RetrieveAuthSessionTicket();
 
 	/**
-	* Receives game event
-	*
-	* @param Event - Game event to act on
-	*/
+	 * Receives game event
+	 *
+	 * @param Event - Game event to act on
+	 */
 	void OnGameEvent(const FGameEvent& Event);
 
-	/** Starts login process with pre-requested Steam App Ticket */
+	/** Starts login process with pre-requested Steam auth session ticket */
 	void StartLogin();
 
 private:

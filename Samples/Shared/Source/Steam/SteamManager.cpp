@@ -14,31 +14,44 @@
 
 #include "steam/steam_api.h"
 
-// Steam Manager Implementation
+/**
+ * Steam Manager Implementation
+ */
 class FSteamManager::FImpl
 {
 public:
-	FImpl()
-	{
-		
-	}
-
-	~FImpl()
-	{
-		
-	}
+	FImpl();
+	~FImpl();
 
 	void Init();
 	void Update();
-	void RetrieveEncryptedAppTicket();
-	void OnRequestEncryptedAppTicket(EncryptedAppTicketResponse_t* pEncryptedAppTicketResponse, bool bIOFailure);
+	void RetrieveAuthSessionTicket();
+	void OnGetAuthSessionTicket(GetAuthSessionTicketResponse_t* pAuthSessionTicketResponse);
+
+	void OnLoginComplete();
 	void StartLogin();
 
 private:
-	CCallResult<FSteamManager::FImpl, EncryptedAppTicketResponse_t> SteamCallResultEncryptedAppTicket;
-	std::wstring EncryptedSteamAppTicket;
+
+	void CleanupResources();
+
+	CCallbackManual<FSteamManager::FImpl, GetAuthSessionTicketResponse_t> SteamCallbackGetAuthSessionTicket;
+	/** Auth session ticket converted to Hex, to pass to the EOS SDK */
+	std::wstring AuthSessionTicket;
+	/** We need to keep hold of this and then call ISteamUser::CancelAuthTicket when done with the login */
+	HAuthTicket AuthSessionTicketHandle;
 	bool bIsInitialized = false;
 };
+
+FSteamManager::FImpl::FImpl()
+{
+	SteamCallbackGetAuthSessionTicket.Register(this, &FImpl::OnGetAuthSessionTicket);
+}
+
+FSteamManager::FImpl::~FImpl()
+{
+	SteamCallbackGetAuthSessionTicket.Unregister();
+}
 
 void FSteamManager::FImpl::Init()
 {
@@ -48,7 +61,7 @@ void FSteamManager::FImpl::Init()
 
 		bIsInitialized = true;
 
-		RetrieveEncryptedAppTicket();
+		RetrieveAuthSessionTicket();
 	}
 	else
 	{
@@ -67,106 +80,95 @@ void FSteamManager::FImpl::Update()
 	SteamAPI_RunCallbacks();
 }
 
-void FSteamManager::FImpl::RetrieveEncryptedAppTicket()
+void FSteamManager::FImpl::RetrieveAuthSessionTicket()
 {
 	if (!bIsInitialized)
 	{
 		return;
 	}
 
-	if (FCommandLine::Get().HasParam(CommandLineConstants::SteamAppTicket))
+	FDebugLog::Log(L"Steam - Requesting Auth Session Ticket ...");
+
+	// Steamworks (https://partner.steamgames.com/doc/api/ISteamUser#GetAuthSessionTicket) API says a size of 1024 is enough
+	// unless there is a large amount of available DLC, so lets use a large enough buffer
+	std::vector<uint8> RawAuthSessionTicket(4096);
+	uint32 AuthSessionTicketSize = 0;
+	AuthSessionTicketHandle = SteamUser()->GetAuthSessionTicket(RawAuthSessionTicket.data(), (int)RawAuthSessionTicket.size(), &AuthSessionTicketSize);
+	if (AuthSessionTicketHandle == k_HAuthTicketInvalid || AuthSessionTicketSize == 0)
 	{
-		// Attempt to use app ticket string from command line
-		EncryptedSteamAppTicket = FCommandLine::Get().GetParamValue(CommandLineConstants::SteamAppTicket);
+		FDebugLog::LogError(L"Steam - Unable to get the auth session ticket.");
+		return;
 	}
+	// Clamp to the right size
+	RawAuthSessionTicket.resize(AuthSessionTicketSize);
 
-	if (!EncryptedSteamAppTicket.empty())
+	uint32 StringBufSize = ((uint32)RawAuthSessionTicket.size() * 2) + 1;
+	std::vector<char> NarrowAuthSessionTicket(StringBufSize);
+	uint32_t OutLen = StringBufSize;
+	EOS_EResult ConvResult = EOS_ByteArray_ToString(RawAuthSessionTicket.data(), RawAuthSessionTicket.size(), NarrowAuthSessionTicket.data(), &OutLen);
+	if (ConvResult != EOS_EResult::EOS_Success)
 	{
-		StartLogin();
-	}
-	else
-	{
-		FDebugLog::Log(L"Steam - Requesting Encrypted App Ticket ...");
-		
-		SteamAPICall_t SteamAPICallHandle = SteamUser()->RequestEncryptedAppTicket(nullptr, 0);
-
-		SteamCallResultEncryptedAppTicket.Set(SteamAPICallHandle, this, &FSteamManager::FImpl::OnRequestEncryptedAppTicket);
-	}
-}
-
-void FSteamManager::FImpl::OnRequestEncryptedAppTicket(EncryptedAppTicketResponse_t* EncryptedAppTicketResponse, bool bIOFailure)
-{
-	FDebugLog::Log(L"Steam - OnRequestEncryptedAppTicket Callback");
-
-	if (bIOFailure)
-	{
-		FDebugLog::LogError(L"Steam - OnRequestEncryptedAppTicket Callback - Failure Requesting Ticket");
+		FDebugLog::LogError(L"Steam - RetrieveAuthSessionTicket - EOS_ByteArray_ToString failed - Result: %ls", FStringUtils::Widen(EOS_EResult_ToString(ConvResult)).c_str());
+		CleanupResources();
 		return;
 	}
 
-	if (EncryptedAppTicketResponse->m_eResult == k_EResultOK)
+	assert(OutLen == StringBufSize);
+	AuthSessionTicket = FStringUtils::Widen(std::string(NarrowAuthSessionTicket.data(), NarrowAuthSessionTicket.size()));
+
+	// NOTE: Not starting the login straight away because according to Steamworks's documentation, we should only start using the
+	// auth session ticket once we get the GetAuthSessionTicketResponse_t callback.
+}
+
+void FSteamManager::FImpl::CleanupResources()
+{
+	AuthSessionTicket.clear();
+	// Once login finished(successfully or not), or the actual steam callback returned an error  we need to call Steamwork's ISteamUser::CancelAuthTicket
+	if (AuthSessionTicketHandle != k_HAuthTicketInvalid)
 	{
-		// Get ticket size
-		uint32 TicketSize = 0;
-		SteamUser()->GetEncryptedAppTicket(nullptr, 0, &TicketSize);
-
-		// Get encrypted app ticket
-		uint32 BufSize = TicketSize;
-		uint8* SteamAppTicket = new uint8[BufSize];
-		if (!SteamUser()->GetEncryptedAppTicket(SteamAppTicket, BufSize, &TicketSize))
-		{
-			FDebugLog::LogError(L"Steam App Ticket not available");
-			delete[] SteamAppTicket;
-			return;
-		}
-
-		uint32 StringBufSize = (TicketSize * 2) + 1;
-		char* SteamAppTicketString = new char[StringBufSize];
-		uint32_t OutLen = StringBufSize;
-		EOS_EResult ConvResult = EOS_ByteArray_ToString(SteamAppTicket, BufSize, SteamAppTicketString, &OutLen);
-		if (ConvResult != EOS_EResult::EOS_Success)
-		{
-			delete[] SteamAppTicket;
-			delete[] SteamAppTicketString;
-			FDebugLog::LogError(L"Steam - OnRequestEncryptedAppTicket Callback - EOS_ByteArray_ToString Failed - Result: %ls", FStringUtils::Widen(EOS_EResult_ToString(ConvResult)).c_str());
-			return;
-		}
-
-		std::string NarrowSteamAppTicketString = SteamAppTicketString;
-		EncryptedSteamAppTicket = FStringUtils::Widen(NarrowSteamAppTicketString);
-
-		delete[] SteamAppTicket;
-		delete[] SteamAppTicketString;
-
-		StartLogin();
+		SteamUser()->CancelAuthTicket(AuthSessionTicketHandle);
+		AuthSessionTicketHandle = k_HAuthTicketInvalid;
 	}
-	else if (EncryptedAppTicketResponse->m_eResult == k_EResultLimitExceeded)
+}
+
+void FSteamManager::FImpl::OnGetAuthSessionTicket(GetAuthSessionTicketResponse_t* pAuthSessionTicketResponse)
+{
+	// GetAuthSessionTicketResponse_t is broadcast to all listeners, so if we get the wrong handle, it doesn't necessarily mean it's an error,
+	// since maybe some other code is also processing auth session tickets.
+	if (pAuthSessionTicketResponse->m_hAuthTicket != AuthSessionTicketHandle)
 	{
-		FDebugLog::LogError(L"Steam - OnRequestEncryptedAppTicket Callback - Calling RequestEncryptedAppTicket more than once per minute returns this error");
+		FDebugLog::LogWarning(L"Steam - Ignoring unexpected GetAuthSessionTicketResponse_t callback");
+		return;
 	}
-	else if (EncryptedAppTicketResponse->m_eResult == k_EResultDuplicateRequest)
+
+	if (pAuthSessionTicketResponse->m_eResult != k_EResultOK)
 	{
-		FDebugLog::LogError(L"Steam - OnRequestEncryptedAppTicket Callback - Calling RequestEncryptedAppTicket while there is already a pending request results in this error");
+		FDebugLog::LogError(L"Steam - GetAuthSessionTicketResponse_t callback failed. Error %d", (int)pAuthSessionTicketResponse->m_eResult);
+		CleanupResources();
+		return;
 	}
-	else if (EncryptedAppTicketResponse->m_eResult == k_EResultNoConnection)
-	{
-		FDebugLog::LogError(L"Steam - OnRequestEncryptedAppTicket Callback - Calling RequestEncryptedAppTicket while not connected to steam results in this error");
-	}
+
+	StartLogin();
 }
 
 void FSteamManager::FImpl::StartLogin()
 {
-	if (!EncryptedSteamAppTicket.empty())
+	if (!AuthSessionTicket.empty())
 	{
-		FDebugLog::Log(L"Steam - StartLogin - Ticket: %ls", EncryptedSteamAppTicket.c_str());
+		FDebugLog::Log(L"Steam - StartLogin - Auth Session Ticket: %ls", AuthSessionTicket.c_str());
 
-		FGameEvent Event(EGameEventType::StartUserLogin, EncryptedSteamAppTicket, (int)ELoginMode::ExternalAuth, (int)ELoginExternalType::Steam);
+		FGameEvent Event(EGameEventType::StartUserLogin, AuthSessionTicket, (int)ELoginMode::ExternalAuth, (int)ELoginExternalType::Steam);
 		FGame::Get().OnGameEvent(Event);
 	}
 	else
 	{
-		FDebugLog::LogError(L"Steam - StartLogin - Invalid Steam App Ticket");
+		FDebugLog::LogError(L"Steam - StartLogin - Invalid Steam Auth Session Ticket");
 	}
+}
+
+void FSteamManager::FImpl::OnLoginComplete()
+{
+	CleanupResources();
 }
 
 std::unique_ptr<FSteamManager> FSteamManager::Instance;
@@ -207,9 +209,9 @@ void FSteamManager::Update()
 	Impl->Update();
 }
 
-void FSteamManager::RetrieveEncryptedAppTicket()
+void FSteamManager::RetrieveAuthSessionTicket()
 {
-	Impl->RetrieveEncryptedAppTicket();
+	Impl->RetrieveAuthSessionTicket();
 }
 
 void FSteamManager::StartLogin()
@@ -234,5 +236,10 @@ void FSteamManager::OnGameEvent(const FGameEvent& Event)
 			FDebugLog::LogError(L"[EOS SDK] External Account Display Name Not Found");
 		}
 	}
+	else if ((Event.GetType() == EGameEventType::UserLoggedIn) || (Event.GetType() == EGameEventType::UserLoginFailed))
+	{
+		Impl->OnLoginComplete();
+	}
 }
+
 #endif //EOS_STEAM_ENABLED

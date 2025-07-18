@@ -85,11 +85,6 @@ struct CommandLineConstants
 	/** Override locale to be used for EOS_Platform_Create */
 	static constexpr wchar_t Locale[] = L"locale";
 
-#ifdef EOS_STEAM_ENABLED
-	/** SteamAppTicket (Format: String - e.g. "steamappticket 123498765") */
-	static constexpr wchar_t SteamAppTicket[] = L"steamappticket";
-#endif
-
 #ifdef DEV_BUILD
 	/** Username (Format: String - e.g. "userid myusername") */
 	static constexpr wchar_t DevUsername[] = L"userid";

@@ -32,9 +32,6 @@ constexpr wchar_t CommandLineConstants::ServerURL[];
 constexpr wchar_t CommandLineConstants::ServerPort[];
 constexpr wchar_t CommandLineConstants::Locale[];
 
-#ifdef EOS_STEAM_ENABLED
-constexpr wchar_t CommandLineConstants::SteamAppTicket[];
-#endif // EOS_STEAM_ENABLED
 #ifdef DEV_BUILD
 constexpr wchar_t CommandLineConstants::DevUsername[];
 constexpr wchar_t CommandLineConstants::DevPassword[];

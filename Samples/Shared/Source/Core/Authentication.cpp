@@ -14,7 +14,9 @@
 #include "Settings.h"
 #include "Authentication.h"
 
-// User context passed to EOS_Connect_Login, so we know what AccountId is logging in
+/**
+ * User context passed to EOS_Connect_Login, so we know what AccountId is logging in
+ */
 struct FConnectLoginContext
 {
 	EOS_EpicAccountId AccountId;
@@ -89,7 +91,9 @@ bool FAuthentication::Login(ELoginMode LoginMode, std::wstring FirstStr, std::ws
 		LoginOptions.ScopeFlags = EOS_EAuthScopeFlags::EOS_AS_BasicProfile | EOS_EAuthScopeFlags::EOS_AS_FriendsList | EOS_EAuthScopeFlags::EOS_AS_Presence;
 	}
 
-	static char FirstParamStr[256];
+	// We need to use a big enough size to support a steam auth session ticket (see where GetAuthSessionTicket is called).
+	// The "*2 +1" is because this is the hexadecimal string we will be passing to the SDK.
+	char FirstParamStr[4096*2+1];
 	if (FirstStr.size() > sizeof(FirstParamStr) - 1)
 	{
 		FDebugLog::LogError(L"[EOS SDK] Can't Log in - entered string is too long!");
@@ -97,7 +101,7 @@ bool FAuthentication::Login(ELoginMode LoginMode, std::wstring FirstStr, std::ws
 	}
 	sprintf_s(FirstParamStr, sizeof(FirstParamStr), "%s", FStringUtils::Narrow(FirstStr).c_str());
 
-	static char SecondParamStr[256];
+	char SecondParamStr[256];
 	if (SecondStr.size() > sizeof(SecondParamStr) - 1)
 	{
 		FDebugLog::LogError(L"[EOS SDK] Can't Log in - entered string is too long!");
@@ -163,8 +167,7 @@ bool FAuthentication::Login(ELoginMode LoginMode, std::wstring FirstStr, std::ws
 				case ELoginExternalType::Steam:
 				{
 					FDebugLog::Log(L"[EOS SDK] Logging In with Steam");
-					Credentials.ExternalType = EOS_EExternalCredentialType::EOS_ECT_STEAM_APP_TICKET;
-					// todo fix steam login with EOS_ECT_STEAM_SESSION_TICKET
+					Credentials.ExternalType = EOS_EExternalCredentialType::EOS_ECT_STEAM_SESSION_TICKET;
 					break;
 				}
 				default:

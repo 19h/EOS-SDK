@@ -257,13 +257,13 @@ void EOS_CALL FStore::QueryStoreCompleteCallbackFn(const EOS_Ecom_QueryOffersCal
 		case EOS_EResult::EOS_Success:
 		case EOS_EResult::EOS_Ecom_CatalogOfferPriceInvalid:
 		case EOS_EResult::EOS_Ecom_CatalogOfferStale:
-			FDebugLog::Log(L"[EOS SDK] Offer[%d] id(%ls) title(%ls) Price[Result(%d) Curr(%ull) Original(%ull) DecimalPoint(%ud)] Available?(%ls) Own[%u of %d]",
+			FDebugLog::Log(L"[EOS SDK] Offer[%d] id(%ls) title(%ls) Price[Result(%d) Curr(%ull) Original(%ull) DecimalPoint(%ud)] Available?(%ls) Limit[%d]",
 				IndexOptions.OfferIndex,
 				FStringUtils::Widen(Offer->Id).c_str(),
 				FStringUtils::Widen(Offer->TitleText).c_str(),
 				Offer->PriceResult, Offer->CurrentPrice64, Offer->OriginalPrice64, Offer->DecimalPoint,
 				Offer->bAvailableForPurchase ? L"true" : L"false",
-				Offer->PurchasedCount, Offer->PurchaseLimit);
+				Offer->PurchaseLimit);
 
 			NewOffers.push_back(FOfferData{
 				OfferData->LocalUserId,
@@ -434,4 +434,3 @@ void EOS_CALL FStore::CheckoutCompleteCallbackFn(const EOS_Ecom_CheckoutCallback
 	FGameEvent Event(EGameEventType::AddNotification, Msg);
 	FGame::Get().OnGameEvent(Event);
 }
-
