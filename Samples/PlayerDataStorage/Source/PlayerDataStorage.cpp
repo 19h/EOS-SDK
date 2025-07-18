@@ -711,6 +711,12 @@ void EOS_CALL FPlayerDataStorage::OnFileCopied(const EOS_PlayerDataStorage_Dupli
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"[EOS SDK] Player data storage: error while copying the file: %ls.", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
@@ -726,6 +732,12 @@ void EOS_CALL FPlayerDataStorage::OnFileRemoved(const EOS_PlayerDataStorage_Dele
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"[EOS SDK] Player data storage: error while removing file: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());

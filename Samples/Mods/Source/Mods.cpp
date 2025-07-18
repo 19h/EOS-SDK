@@ -107,6 +107,12 @@ void FMods::OnInstallComplete(const EOS_Mods_InstallModCallbackInfo* Data)
 		return;
 	}
 
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
+
 	FMods& Self = *static_cast<FMods*>(Data->ClientData);
 	
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
@@ -143,6 +149,12 @@ void FMods::OnUninstallComplete(const EOS_Mods_UninstallModCallbackInfo* Data)
 	if (!Data)
 	{
 		FDebugLog::LogError(L"Mods: Mod Uninstall failed.");
+		return;
+	}
+
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
 		return;
 	}
 
@@ -205,6 +217,12 @@ void FMods::OnUpdateComplete(const EOS_Mods_UpdateModCallbackInfo* Data)
 		return;
 	}
 
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
+
 	FMods& Self = *static_cast<FMods*>(Data->ClientData);
 
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
@@ -252,6 +270,12 @@ void EOS_CALL FMods::OnEnumerateModsComplete(const EOS_Mods_EnumerateModsCallbac
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		FMods& Mods = *static_cast<FMods*>(Data->ClientData);
 		
 		if (Data->ResultCode != EOS_EResult::EOS_Success)

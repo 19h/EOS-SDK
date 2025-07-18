@@ -14,8 +14,8 @@ public:
 	struct FRegistrationInfoMessage
 	{
 		const char* ProductUserId = nullptr;
+		const char* EOSConnectIdTokenJWT = nullptr;
 		EOS_EAntiCheatCommonClientPlatform ClientPlatform = EOS_EAntiCheatCommonClientPlatform::EOS_ACCCP_Unknown;
-		EOS_EAntiCheatCommonClientType ClientType = EOS_EAntiCheatCommonClientType::EOS_ACCCT_ProtectedClient;
 	};
 
 	static FAntiCheatNetworkTransport& GetInstance();
@@ -33,6 +33,8 @@ public:
 
 	void Send(const EOS_AntiCheatCommon_OnClientActionRequiredCallbackInfo* Message);
 	void Send(const EOS_AntiCheatCommon_OnMessageToClientCallbackInfo* Message);
+
+	void CloseClientConnection(void* ClientHandle);
 
 private:
 	FAntiCheatNetworkTransport();

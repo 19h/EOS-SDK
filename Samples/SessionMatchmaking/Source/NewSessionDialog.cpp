@@ -322,7 +322,7 @@ void FNewSessionDialog::CreateSessionPressed()
 	}
 
 	FSession::Attribute Attribute;
-	Attribute.Key = "Level";
+	Attribute.Key = SESSION_KEY_LEVEL;
 	Attribute.AsString = FStringUtils::Narrow(SessionLevelDropDown->GetCurrentSelection());
 	Attribute.ValueType = FSession::Attribute::String;
 	Attribute.Advertisement = EOS_ESessionAttributeAdvertisementType::EOS_SAAT_Advertise;

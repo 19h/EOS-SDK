@@ -57,14 +57,13 @@ void FAntiCheatNetworkTransport::Send(const FRegistrationInfoMessage& Message)
 	constexpr FMessageType MessageType = FMessageType::RegistrationInfo;
 	const uint32_t MessageLength = 
 		static_cast<uint32_t>(Message.ProductUserId.size() + 1) +
-		sizeof(Message.ClientType) + 
 		sizeof(Message.ClientPlatform);
 
 	Write(MessageType, Buffer, BufferPos);
 	Write(MessageLength, Buffer, BufferPos);
 
 	Write(Message.ProductUserId.c_str(), Message.ProductUserId.size() + 1, Buffer, BufferPos);
-	Write(Message.ClientType, Buffer, BufferPos);
+	Write(Message.EOSConnectIdTokenJWT.c_str(), Message.EOSConnectIdTokenJWT.size() + 1, Buffer, BufferPos);
 	Write(Message.ClientPlatform, Buffer, BufferPos);
 
 	TCPClient.Send(Buffer, BufferPos);

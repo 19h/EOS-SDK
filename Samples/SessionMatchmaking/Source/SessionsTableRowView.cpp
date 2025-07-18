@@ -235,7 +235,7 @@ void FSessionsTableRowView::OnPressed(size_t ActionIndex)
 
 			for (FSession::Attribute& Attr : CurrentSession.Attributes)
 			{
-				if (Attr.Key == "Level")
+				if (Attr.Key == SESSION_KEY_LEVEL)
 				{
 					CurrentSession.Attributes[0].AsString = "Forest";
 				}

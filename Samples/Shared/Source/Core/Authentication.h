@@ -94,6 +94,14 @@ public:
 	void ContinueLogin(EOS_ContinuanceToken ContinuanceToken);
 
 	/**
+	* Gets a Connect ID token which can be sent to a game server for identity verification.
+	*
+	* @param LocalUserId - The local user who the token should be generated for
+	* @returns The JsonWebToken member of EOS_Connect_IdToken on success, otherwise an empty std::string.
+	*/
+	std::string GetConnectIdToken(EOS_ProductUserId LocalUserId);
+
+	/**
 	* Shuts down EOS SDK
 	*/
 	void Shutdown();

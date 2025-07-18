@@ -49,6 +49,8 @@ FLobbyMemberTableRowView::FLobbyMemberTableRowView(Vector2 Pos, Vector2 Size, UI
 	actionColors[FLobbyMemberTableRowData::EAction::MuteAudio] = Color::ForestGreen;
 	actionLabels[FLobbyMemberTableRowData::EAction::HardMuteAudio] = L"HARD MUTE";
 	actionColors[FLobbyMemberTableRowData::EAction::HardMuteAudio] = Color::ForestGreen;
+	actionLabels[FLobbyMemberTableRowData::EAction::ChangeColor] = L"COLOR";
+	actionColors[FLobbyMemberTableRowData::EAction::ChangeColor] = Color::ForestGreen;
 
 	for (size_t Ix = 0; Ix < ActionButtons.size(); ++Ix)
 	{
@@ -261,6 +263,11 @@ void FLobbyMemberTableRowView::OnPressed(size_t ActionIndex)
 	{
 		// Toggle hard mute for selected player, noone in the lobby will hear that player's audio
 		FGame::Get().GetLobbies()->ToggleHardMuteMember(UserId);
+	}
+	else if (ActionIndex == FLobbyMemberTableRowData::EAction::ChangeColor)
+	{
+		// Toggle color the player
+		FGame::Get().GetLobbies()->ShuffleColor();
 	}
 }
 

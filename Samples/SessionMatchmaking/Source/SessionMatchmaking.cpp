@@ -1331,9 +1331,12 @@ void FSessionMatchmaking::OnJoinSessionFinished()
 			FSession Session;
 			Session.Name = GenerateJoinedSessionName(true);
 			Session.InitFromSessionInfo(JoiningSessionDetails.get(), SessionInfo);
+			// local user is joining this session
+			// Without p2p, the sample is incapable of communicating to host to call EOS_Sessions_RegisterPlayer and update this globally
+			Session.NumConnections += 1; 
 			EOS_SessionDetails_Info_Release(SessionInfo);
 
-			//Check is we have a local session with same ID (no need to add an extra one in this case).
+			// Check if we have a local session with same ID (no need to add an extra one in this case).
 			bool bLocalSessionFound = false;
 			for (auto SessionPair : CurrentSessions)
 			{
@@ -1510,6 +1513,12 @@ void EOS_CALL FSessionMatchmaking::OnUpdateSessionCompleteCallback(const EOS_Ses
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FGame::Get().GetSessions()->OnSessionUpdateFinished(false, Data->SessionName, Data->SessionId);
@@ -1567,6 +1576,12 @@ void EOS_CALL FSessionMatchmaking::OnStartSessionCompleteCallback(const EOS_Sess
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		std::string* SessionNamePtr = static_cast<std::string*>(Data->ClientData);
 
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
@@ -1589,6 +1604,12 @@ void EOS_CALL FSessionMatchmaking::OnEndSessionCompleteCallback(const EOS_Sessio
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		std::string* SessionNamePtr = static_cast<std::string*>(Data->ClientData);
 
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
@@ -1611,6 +1632,12 @@ void EOS_CALL FSessionMatchmaking::OnDestroySessionCompleteCallback(const EOS_Se
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		std::string* SessionNameStringPtr = static_cast<std::string*>(Data->ClientData);
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
@@ -1635,6 +1662,12 @@ void EOS_CALL FSessionMatchmaking::OnRegisterCompleteCallback(const EOS_Sessions
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"Session Matchmaking (OnRegisterCompleteCallback): error code: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
@@ -1650,6 +1683,12 @@ void EOS_CALL FSessionMatchmaking::OnUnregisterCompleteCallback(const EOS_Sessio
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"Session Matchmaking (OnUnregisterCompleteCallback): error code: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
@@ -1665,6 +1704,12 @@ void EOS_CALL FSessionMatchmaking::OnFindSessionsCompleteCallback(const EOS_Sess
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			// Session no longer exists to join; inform the UI of the completed join game attempt.
@@ -1688,6 +1733,12 @@ void EOS_CALL FSessionMatchmaking::OnSendInviteCompleteCallback(const EOS_Sessio
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"Session Matchmaking (OnSendInviteCompleteCallback): error code: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
@@ -1860,6 +1911,12 @@ void EOS_CALL FSessionMatchmaking::OnJoinSessionCallback(const EOS_Sessions_Join
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"Session Matchmaking (OnJoinSessionCallback): error code: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
@@ -1918,6 +1975,11 @@ void EOS_CALL FSessionMatchmaking::OnSetPresenceCallback(const EOS_Presence_SetP
 	if (!Data)
 	{
 		FDebugLog::LogError(L"Session Matchmaking (OnSetPresenceCallback): EOS_Presence_SetPresenceCallbackInfo is null");
+	}
+	else if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
 	}
 	else if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{

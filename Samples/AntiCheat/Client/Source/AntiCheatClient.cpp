@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "Game.h"
+#include "GameEvent.h"
 #include "Platform.h"
 #include "AntiCheatNetworkTransport.h"
 #include "AntiCheatClient.h"
@@ -21,6 +22,8 @@ FAntiCheatClient::FAntiCheatClient()
 	FGame::Get().GetAntiCheatNetworkTransport()->SetOnClientActionRequiredCallback([this](EOS_AntiCheatCommon_OnClientActionRequiredCallbackInfo Message)
 	{
 		FDebugLog::Log(L"OnClientActionRequired: ClientAction=%d, ClientActionReasonCode=%d, ClientActionReasonDetails=%ls", Message.ClientAction, Message.ActionReasonCode, FStringUtils::Widen(Message.ActionReasonDetailsString).c_str());
+		FGameEvent Event(EGameEventType::AntiCheatKicked);
+		FGame::Get().OnGameEvent(Event);
 	});
 }
 
@@ -39,7 +42,7 @@ void FAntiCheatClient::Init()
 	}
 }
 
-bool FAntiCheatClient::Start(const std::string& Host, int Port, const FProductUserId& LocalUserId)
+bool FAntiCheatClient::Start(const std::string& Host, int Port, const FProductUserId& LocalUserId, const std::string& EOSConnectIdTokenJWT)
 {
 	if (!ConnectToAntiCheatServer(Host, Port))
 	{
@@ -62,7 +65,7 @@ bool FAntiCheatClient::Start(const std::string& Host, int Port, const FProductUs
 		return false;
 	}
 
-	SendRegistrationInfoToAntiCheatServer(LocalUserId);
+	SendRegistrationInfoToAntiCheatServer(LocalUserId, EOSConnectIdTokenJWT);
 	bConnected = true;
 
 	return true;
@@ -160,13 +163,13 @@ void FAntiCheatClient::DisconnectFromAntiCheatServer()
 	FGame::Get().GetAntiCheatNetworkTransport()->Disconnect();
 }
 
-void FAntiCheatClient::SendRegistrationInfoToAntiCheatServer(const FProductUserId& LocalUserId)
+void FAntiCheatClient::SendRegistrationInfoToAntiCheatServer(const FProductUserId& LocalUserId, const std::string& EOSConnectIdTokenJWT)
 {
 	FAntiCheatNetworkTransport::FRegistrationInfoMessage Message;
 
 	Message.ProductUserId = FStringUtils::Narrow(LocalUserId.ToString());
+	Message.EOSConnectIdTokenJWT = EOSConnectIdTokenJWT;
 	Message.ClientPlatform = EOS_EAntiCheatCommonClientPlatform::EOS_ACCCP_Windows;
-	Message.ClientType = EOS_EAntiCheatCommonClientType::EOS_ACCCT_ProtectedClient;
 
 	FGame::Get().GetAntiCheatNetworkTransport()->Send(Message);
 }

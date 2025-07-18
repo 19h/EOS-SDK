@@ -51,7 +51,7 @@ namespace
 		wsprintf(Buffer, L"%d/%d", Session.NumConnections, Session.MaxPlayers);
 		Result.Values[FSessionsTableRowData::EValue::Players] = Buffer;
 
-		const FSession::Attribute* LevelAttribute = Session.GetAttribute("Level");
+		const FSession::Attribute* LevelAttribute = Session.GetAttribute(SESSION_KEY_LEVEL);
 		Result.Values[FSessionsTableRowData::EValue::Level] = FStringUtils::Widen((LevelAttribute) ? LevelAttribute->AsString : "None");
 
 		Result.Values[FSessionsTableRowData::EValue::PresenceSession] = Session.bPresenceSession ? L"Yes" : L"No";
@@ -381,7 +381,7 @@ void FSessionMatchmakingDialog::SearchSession(const std::wstring& Pattern)
 	std::vector<FSession::Attribute> Attributes;
 
 	FSession::Attribute LevelAttribute;
-	LevelAttribute.Key = "Level";
+	LevelAttribute.Key = SESSION_KEY_LEVEL;
 	LevelAttribute.ValueType = FSession::Attribute::String;
 	LevelAttribute.AsString = SearchLevelName;
 	LevelAttribute.Advertisement = EOS_ESessionAttributeAdvertisementType::EOS_SAAT_Advertise;

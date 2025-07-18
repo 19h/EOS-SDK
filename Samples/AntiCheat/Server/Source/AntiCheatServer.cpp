@@ -5,6 +5,7 @@
 
 #include "AntiCheatNetworkTransport.h"
 #include "DebugLog.h"
+#include "eos_connect.h"
 #include "eos_anticheatserver.h"
 #include "eos_anticheatserver_types.h"
 #include "eos_sdk.h"
@@ -12,6 +13,7 @@
 
 void FAntiCheatServer::Init(EOS_HPlatform Platform)
 {
+	ConnectHandle = EOS_Platform_GetConnectInterface(Platform);
 	AntiCheatServerHandle = EOS_Platform_GetAntiCheatServerInterface(Platform);
 }
 
@@ -40,13 +42,40 @@ void FAntiCheatServer::BeginSession()
 	}
 }
 
+void FAntiCheatServer::VerifyIdToken(EOS_ProductUserId ExpectedUserId, const char* ConnectIdTokenJWT, void* ClientData, const EOS_Connect_OnVerifyIdTokenCallback Callback)
+{
+	EOS_Connect_IdToken Token = {};
+	Token.ApiVersion = EOS_CONNECT_IDTOKEN_API_LATEST;
+	Token.ProductUserId = ExpectedUserId;
+	Token.JsonWebToken = ConnectIdTokenJWT;
+
+	EOS_Connect_VerifyIdTokenOptions Options = {};
+	Options.ApiVersion = EOS_CONNECT_VERIFYIDTOKEN_API_LATEST;
+	Options.IdToken = &Token;
+
+	EOS_Connect_VerifyIdToken(ConnectHandle, &Options, ClientData, Callback);
+}
+
 void FAntiCheatServer::RegisterClient(void* ClientHandle, FAntiCheatNetworkTransport::FRegistrationInfoMessage Message)
 {
 	EOS_AntiCheatServer_RegisterClientOptions Options = {};
 	Options.ApiVersion = EOS_ANTICHEATSERVER_REGISTERCLIENT_API_LATEST;
 	Options.ClientHandle = ClientHandle;
-	Options.ClientType = Message.ClientType;
+
+	// The ClientPlatform value was validated using an EOS Connect ID token before this function is called.
 	Options.ClientPlatform = Message.ClientPlatform;
+	if (Message.ClientPlatform == EOS_EAntiCheatCommonClientPlatform::EOS_ACCCP_Windows ||
+		Message.ClientPlatform == EOS_EAntiCheatCommonClientPlatform::EOS_ACCCP_Mac ||
+		Message.ClientPlatform == EOS_EAntiCheatCommonClientPlatform::EOS_ACCCP_Linux)
+	{
+		Options.ClientType = EOS_EAntiCheatCommonClientType::EOS_ACCCT_ProtectedClient;
+	}
+	else
+	{
+		Options.ClientType = EOS_EAntiCheatCommonClientType::EOS_ACCCT_UnprotectedClient;
+	}
+	
+	// The ProductUserId value was validated using an EOS Connect ID token before this function is called.
 	Options.UserId = EOS_ProductUserId_FromString(Message.ProductUserId);
 
 	EOS_AntiCheatServer_RegisterClient(AntiCheatServerHandle, &Options);
@@ -91,4 +120,5 @@ void FAntiCheatServer::OnMessageToClientCb(const EOS_AntiCheatCommon_OnMessageTo
 void FAntiCheatServer::OnClientActionRequiredCb(const EOS_AntiCheatCommon_OnClientActionRequiredCallbackInfo* Message)
 {
 	FAntiCheatNetworkTransport::GetInstance().Send(Message);
+	FAntiCheatNetworkTransport::GetInstance().CloseClientConnection(Message->ClientHandle);
 }

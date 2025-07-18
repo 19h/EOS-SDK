@@ -15,6 +15,7 @@
 #include <eos_lobby.h>
 #include <eos_rtc.h>
 #include <eos_rtc_audio.h>
+#include <eos_rtc_data.h>
 
 void FLobby::InitFromLobbyHandle(EOS_LobbyId InId)
 {
@@ -176,6 +177,7 @@ void FLobby::InitFromLobbyDetails(EOS_HLobbyDetails LobbyDetailsId)
 
 			// Copy RTC status to new object
 			NewMember.RTCState = OldMember.RTCState;
+			NewMember.CurrentColor = OldMember.CurrentColor;
 			break;
 		}
 	}
@@ -944,6 +946,51 @@ void FLobbies::ShuffleSkin()
 	}
 }
 
+void FLobbies::ShuffleColor()
+{
+	if (!CurrentLobby.IsValid())
+	{
+		return;
+	}
+
+	if (!CurrentUserProductId.IsValid())
+	{
+		FDebugLog::LogError(L"Lobbies - ShuffleColor: Current player is invalid!");
+		return;
+	}
+
+	if (FLobbyMember* LocalLobbyMember = CurrentLobby.GetMemberByProductUserId(CurrentUserProductId))
+	{
+		LocalLobbyMember->ShuffleColor();			
+		SendSkinColorUpdate(LocalLobbyMember->CurrentColor);
+	}
+}
+
+void FLobbies::SendSkinColorUpdate(FLobbyMember::SkinColor InColor)
+{
+	const size_t CommandSize = sizeof(ELobbyRTCDataCommand) + sizeof(FLobbyMember::SkinColor);
+	uint8_t Data[CommandSize];
+
+	Data[0] = static_cast<uint8_t>(ELobbyRTCDataCommand::SkinColor);
+	Data[1] = static_cast<uint8_t>(InColor);
+
+	EOS_RTCData_SendDataOptions SendDataOptions{};
+	SendDataOptions.ApiVersion = EOS_RTCDATA_SENDDATA_API_LATEST;
+	SendDataOptions.LocalUserId = CurrentUserProductId;
+	SendDataOptions.RoomName = CurrentLobby.RTCRoomName.c_str();
+	SendDataOptions.Data = Data;
+	SendDataOptions.DataLengthBytes = CommandSize;
+
+	EOS_HRTC RTCHandle = EOS_Platform_GetRTCInterface(FPlatform::GetPlatformHandle());
+	EOS_HRTCData RTCDataHandle = EOS_RTC_GetDataInterface(RTCHandle);
+
+	EOS_EResult Result = EOS_RTCData_SendData(RTCDataHandle, &SendDataOptions);
+	if (Result != EOS_EResult::EOS_Success)
+	{
+		FDebugLog::LogError(L"Lobbies: can't send data through data channel. Error code: %ls", FStringUtils::Widen(EOS_EResult_ToString(Result)).c_str());
+	}
+}
+
 void FLobbies::MuteAudio(FProductUserId TargetUserId)
 {
 	EOS_HRTC RTCHandle = EOS_Platform_GetRTCInterface(FPlatform::GetPlatformHandle());
@@ -1455,6 +1502,7 @@ void FLobbies::SubscribeToRTCEvents()
 
 	EOS_HRTC RTCHandle = EOS_Platform_GetRTCInterface(FPlatform::GetPlatformHandle());
 	EOS_HRTCAudio RTCAudioHandle = EOS_RTC_GetAudioInterface(RTCHandle);
+	EOS_HRTCData RTCDataHandle = EOS_RTC_GetDataInterface(RTCHandle);
 
 	// Register for RTC Room participant changes
 	EOS_RTC_AddNotifyParticipantStatusChangedOptions AddNotifyParticipantStatusChangedOptions = {};
@@ -1477,6 +1525,12 @@ void FLobbies::SubscribeToRTCEvents()
 	{
 		FDebugLog::LogError(L"Lobbies: Failed to bind to RTCAudio AddNotifyParticipantUpdated notification.");
 	}
+
+	EOS_RTCData_AddNotifyDataReceivedOptions AddNotifyDataReceivedOptions = {};
+	AddNotifyDataReceivedOptions.ApiVersion = EOS_RTCDATA_ADDNOTIFYDATARECEIVED_API_LATEST;
+	AddNotifyDataReceivedOptions.LocalUserId = CurrentUserProductId;
+	AddNotifyDataReceivedOptions.RoomName = CurrentLobby.RTCRoomName.c_str();
+	CurrentLobby.RTCRoomDataReceived = EOS_RTCData_AddNotifyDataReceived(RTCDataHandle, &AddNotifyDataReceivedOptions, nullptr, OnRTCRoomDataReceived);
 }
 
 void FLobbies::UnsubscribeFromRTCEvents()
@@ -1505,6 +1559,14 @@ void FLobbies::UnsubscribeFromRTCEvents()
 	{
 		EOS_Lobby_RemoveNotifyRTCRoomConnectionChanged(LobbyHandle, CurrentLobby.RTCRoomConnectionChanged);
 		CurrentLobby.RTCRoomConnectionChanged = EOS_INVALID_NOTIFICATIONID;
+	}
+
+	if (CurrentLobby.RTCRoomDataReceived != EOS_INVALID_NOTIFICATIONID)
+	{
+		EOS_HRTCData RTCDataHandle = EOS_RTC_GetDataInterface(RTCHandle);
+
+		EOS_RTCData_RemoveNotifyDataReceived(RTCDataHandle, CurrentLobby.RTCRoomDataReceived);
+		CurrentLobby.RTCRoomDataReceived = EOS_INVALID_NOTIFICATIONID;
 	}
 
 	CurrentLobby.RTCRoomName.clear();
@@ -1815,6 +1877,12 @@ void FLobbies::OnRTCRoomParticipantJoined(const char* RoomName, FProductUserId P
 
 		bDirty = true;
 	}
+
+	// Send update of skin color to new participant
+	if (FLobbyMember* LocalLobbyMember = CurrentLobby.GetMemberByProductUserId(CurrentUserProductId))
+	{
+		SendSkinColorUpdate(LocalLobbyMember->CurrentColor);
+	}
 }
 
 void FLobbies::OnRTCRoomParticipantLeft(const char* RoomName, FProductUserId ParticipantId)
@@ -1901,6 +1969,63 @@ void FLobbies::OnRTCRoomUpdateReceivingComplete(const char* RoomName, FProductUs
 	{
 		LobbyMember->RTCState.bIsLocallyMuted = bIsMuted;
 		LobbyMember->RTCState.bMuteActionInProgress = false;
+		bDirty = true;
+	}
+}
+
+void FLobbies::OnRTCRoomDataReceived(const char* RoomName, FProductUserId ParticipantId, const void* Data, uint32_t DataLengthBytes)
+{
+	// Ensure this update is for our room
+	if (CurrentLobby.RTCRoomName.empty() || CurrentLobby.RTCRoomName != RoomName)
+	{
+		return;
+	}
+
+	if (DataLengthBytes < sizeof(ELobbyRTCDataCommand))
+	{
+		FDebugLog::LogError(L"Lobbies (OnRTCRoomDataReceived): wrong command format");
+		return;
+	}
+
+	ELobbyRTCDataCommand Command = *(static_cast<const ELobbyRTCDataCommand*>(Data));
+	const void* Payload = static_cast<const uint8_t*>(Data) + sizeof(ELobbyRTCDataCommand);
+
+	switch (Command)
+	{
+	case ELobbyRTCDataCommand::SkinColor:
+		{
+			const size_t SkinColorCommandLength = sizeof(ELobbyRTCDataCommand) + sizeof(FLobbyMember::SkinColor);
+			if (DataLengthBytes >= SkinColorCommandLength)
+			{
+				uint8_t SkinColorInt = *(static_cast<const uint8_t*>(Payload));
+				if (static_cast<uint8_t>(FLobbyMember::SkinColor::White) <= SkinColorInt && SkinColorInt < static_cast<uint8_t>(FLobbyMember::SkinColor::Count))
+				{
+					OnSkinColorChanged(ParticipantId, *(static_cast<const FLobbyMember::SkinColor*>(Payload)));
+				}
+				else
+				{
+					FDebugLog::LogError(L"Lobbies (OnRTCRoomDataReceived): wrong skin color value");
+				}
+			}
+			else
+			{
+				FDebugLog::LogError(L"Lobbies (OnRTCRoomDataReceived): wrong command format");
+			}
+		}
+		break;
+	default:
+		FDebugLog::Log(L"Lobbies (OnRTCRoomDataReceived): unexpected command %d", Command);
+	}
+}
+
+void FLobbies::OnSkinColorChanged(FProductUserId ParticipantId, const FLobbyMember::SkinColor InColor)
+{
+	// Find this participant in our list
+	if (FLobbyMember* LobbyMember = CurrentLobby.GetMemberByProductUserId(ParticipantId))
+	{
+		// Update skin color of participant
+		LobbyMember->CurrentColor = InColor;
+
 		bDirty = true;
 	}
 }
@@ -2418,6 +2543,18 @@ void EOS_CALL FLobbies::OnRTCRoomUpdateReceivingComplete(const EOS_RTCAudio_Upda
 	else
 	{
 		FDebugLog::LogError(L"Lobbies (OnRTCRoomUpdateReceivingComplete): EOS_RTCAudio_UpdateReceivingCallbackInfo is null");
+	}
+}
+
+void EOS_CALL FLobbies::OnRTCRoomDataReceived(const EOS_RTCData_DataReceivedCallbackInfo* Data)
+{
+	if (Data)
+	{
+		FGame::Get().GetLobbies()->OnRTCRoomDataReceived(Data->RoomName, Data->ParticipantId, Data->Data, Data->DataLengthBytes);
+	}
+	else
+	{
+		FDebugLog::LogError(L"Lobbies (OnRTCRoomDataReceived): EOS_RTCData_DataReceivedCallbackInfo is null");
 	}
 }
 

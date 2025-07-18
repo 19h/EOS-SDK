@@ -12,8 +12,8 @@ public:
 	struct FRegistrationInfoMessage
 	{
 		std::string ProductUserId;
+		std::string EOSConnectIdTokenJWT;
 		EOS_EAntiCheatCommonClientPlatform ClientPlatform = EOS_EAntiCheatCommonClientPlatform::EOS_ACCCP_Unknown;
-		EOS_EAntiCheatCommonClientType ClientType = EOS_EAntiCheatCommonClientType::EOS_ACCCT_ProtectedClient;
 	};
 
 	/**

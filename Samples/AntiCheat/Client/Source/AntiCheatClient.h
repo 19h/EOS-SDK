@@ -31,7 +31,7 @@ public:
 	void Init();
 	void OnShutdown();
 
-	bool Start(const std::string& Host, int Port, const FProductUserId& LocalUserId);
+	bool Start(const std::string& Host, int Port, const FProductUserId& LocalUserId, const std::string& EOSConnectIdTokenJWT);
 	void Stop();
 
 	void PollStatus();
@@ -43,7 +43,7 @@ private:
 	void EndSession();
 
 	bool ConnectToAntiCheatServer(const std::string& Host, int Port);
-	void SendRegistrationInfoToAntiCheatServer(const FProductUserId& LocalUserId);
+	void SendRegistrationInfoToAntiCheatServer(const FProductUserId& LocalUserId, const std::string& EOSConnectIdTokenJWT);
 	void DisconnectFromAntiCheatServer();
 
 	void OnMessageFromServerReceived(const void* Data, uint32_t DataLengthBytes) const;

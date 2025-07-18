@@ -5,6 +5,8 @@
 #include <eos_sdk.h>
 #include <eos_sessions.h>
 
+constexpr char* SESSION_KEY_LEVEL = "LEVEL";
+
 /**
  * These values are defined within the SDK in platform specific headers. In this example,
  * Sessions are created from PC so the values are all redefined here. This is indicative of what

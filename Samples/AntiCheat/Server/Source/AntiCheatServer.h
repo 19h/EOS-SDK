@@ -4,6 +4,7 @@
 
 #include "AntiCheatNetworkTransport.h"
 
+#include "eos_connect_types.h"
 #include "eos_anticheatserver_types.h"
 #include "eos_types.h"
 
@@ -14,6 +15,7 @@ public:
 	void BeginSession();
 	void EndSession();
 
+	void VerifyIdToken(EOS_ProductUserId ExpectedUserId, const char* ConnectIdTokenJWT, void* ClientData, const EOS_Connect_OnVerifyIdTokenCallback Callback);
 	void RegisterClient(void* ClientHandle, FAntiCheatNetworkTransport::FRegistrationInfoMessage Message);
 	void UnregisterClient(void* ClientHandle);
 
@@ -24,7 +26,8 @@ private:
 	static void EOS_CALL OnClientActionRequiredCb(const EOS_AntiCheatCommon_OnClientActionRequiredCallbackInfo* Data);
 
 private:
-	EOS_HAntiCheatServer AntiCheatServerHandle;
+	EOS_HConnect ConnectHandle = nullptr;
+	EOS_HAntiCheatServer AntiCheatServerHandle = nullptr;
 
 	EOS_NotificationId MessageToClientId;
 	EOS_NotificationId ClientActionRequiredId;

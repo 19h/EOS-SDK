@@ -44,6 +44,7 @@ public:
 	void Update();
 
 private:
+	friend class FAntiCheatNetworkTransport;
 	void OpenNewClientConnection();
 	void CloseClientConnection(TCPsocket ClientSocket);
 

@@ -498,6 +498,36 @@ void FAuthentication::ContinueLogin(EOS_ContinuanceToken ContinuanceToken)
 	EOS_Auth_LinkAccount(AuthHandle, &Options, NULL, LinkAccountCompleteCallbackFn);
 }
 
+std::string FAuthentication::GetConnectIdToken(EOS_ProductUserId LocalUserId)
+{
+	if (!FPlatform::IsInitialized())
+	{
+		FDebugLog::LogError(L"[EOS SDK] Can't get Connect ID Token - EOS SDK Not Initialized!");
+		return std::string();
+	}
+
+	EOS_Connect_CopyIdTokenOptions Options = {};
+	Options.ApiVersion = EOS_CONNECT_COPYIDTOKEN_API_LATEST;
+	Options.LocalUserId = LocalUserId;
+
+	EOS_Connect_IdToken* IdToken = nullptr;
+	assert(ConnectHandle != nullptr);
+	EOS_EResult Result = EOS_Connect_CopyIdToken(ConnectHandle, &Options, &IdToken);
+	if (Result != EOS_EResult::EOS_Success)
+	{
+		FDebugLog::LogError(L"[EOS SDK] Failed to copy Connect ID token Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Result)).c_str());
+		return std::string();
+	}
+
+	// Copy the JWT member out to an std::string to be returned.
+	std::string IdTokenString = IdToken->JsonWebToken;
+
+	// Free the token memory allocation we received from the SDK.
+	EOS_Connect_IdToken_Release(IdToken);
+
+	return IdTokenString;
+}
+
 void FAuthentication::DeletePersistentAuth()
 {
 	if (!FPlatform::IsInitialized())

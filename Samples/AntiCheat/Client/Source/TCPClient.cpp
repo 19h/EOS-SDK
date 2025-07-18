@@ -47,6 +47,7 @@ void FTCPClient::Disconnect()
 
 	Client = nullptr;
 	bIsConnected = false;
+	FDebugLog::LogWarning(L"Disconnected from server");
 }
 
 void FTCPClient::Send(const void* Data, size_t Length)

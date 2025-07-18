@@ -14,7 +14,7 @@
 
 static const float NewLobbyDialogUIElementsXOffset = 20.0f;
 static const float NewLobbyDialogUIElementsYOffset = 20.0f;
-static const int MaxUsersInLobby = 6;
+static const int MaxUsersInLobby = 20;
 
 FNewLobbyDialog::FNewLobbyDialog(Vector2 InPos,
 	Vector2 InSize,

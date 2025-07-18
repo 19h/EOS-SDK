@@ -262,6 +262,9 @@ enum class EGameEventType: unsigned char
 	/** Change participant's room receiving volume */
 	UpdateParticipantVolume,
 
+	/** Client has been kicked because of an anti-cheat issue */
+	AntiCheatKicked,
+
 	Total
 };
 

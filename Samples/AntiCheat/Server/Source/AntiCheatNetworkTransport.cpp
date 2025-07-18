@@ -46,6 +46,11 @@ void FAntiCheatNetworkTransport::Send(const EOS_AntiCheatCommon_OnMessageToClien
 	TCPClient.Send(Message->ClientHandle, Buffer, BufferPos);
 }
 
+void FAntiCheatNetworkTransport::CloseClientConnection(void* ClientHandle)
+{
+	TCPClient.CloseClientConnection(reinterpret_cast<TCPsocket>(ClientHandle));
+}
+
 size_t FAntiCheatNetworkTransport::ProcessMessage(void* From, char* Buffer, size_t StartPosition)
 {
 	size_t Position = StartPosition;
@@ -62,7 +67,7 @@ size_t FAntiCheatNetworkTransport::ProcessMessage(void* From, char* Buffer, size
 	{
 		FRegistrationInfoMessage Message = {};
 		Message.ProductUserId = Read<char*>(Buffer, strlen(Buffer + Position) + 1, Position);
-		Message.ClientType = Read<EOS_EAntiCheatCommonClientType>(Buffer, Position);
+		Message.EOSConnectIdTokenJWT = Read<char*>(Buffer, strlen(Buffer + Position) + 1, Position);
 		Message.ClientPlatform = Read<EOS_EAntiCheatCommonClientPlatform>(Buffer, Position);
 		OnNewClientCallback(From, Message);
 	}

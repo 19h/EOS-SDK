@@ -275,6 +275,12 @@ void EOS_CALL FLeaderboard::LeaderboardDefinitionsReceivedCallbackFn(const EOS_L
 {
 	assert(Data != NULL);
 
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
+
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{
 		FDebugLog::LogError(L"[EOS SDK] Leaderboards - Query Definitions Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
@@ -379,13 +385,19 @@ void EOS_CALL FLeaderboard::LeaderboardRanksReceivedCallbackFn(const EOS_Leaderb
 {
 	assert(Data != NULL);
 
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
+
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{
 		FDebugLog::LogError(L"[EOS SDK] Leaderboards - Query Ranks Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
 		return;
 	}
 
-	FDebugLog::Log(L"[EOS SDK] Leaderboards - Query Ranks Complete");
+	FDebugLog::Log(L"[EOS SDK] Leaderboards - Query Ranks Complete, LeaderboardId=[%ls]", FStringUtils::Widen(Data->LeaderboardId).c_str());
 
 	FGame::Get().GetLeaderboard()->CacheLeaderboardRecords();
 }
@@ -579,6 +591,12 @@ void EOS_CALL FLeaderboard::LeaderboardUserScoresReceivedCallbackFn(const EOS_Le
 {
 	assert(Data != NULL);
 
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
+
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{
 		FDebugLog::LogError(L"[EOS SDK] Leaderboards - Query User Scores Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
@@ -622,6 +640,12 @@ void FLeaderboard::IngestStat(const std::wstring& StatName, int Amount)
 void EOS_CALL FLeaderboard::StatsIngestCallbackFn(const EOS_Stats_IngestStatCompleteCallbackInfo* Data)
 {
 	assert(Data != NULL);
+
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
 
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{

@@ -297,17 +297,23 @@ void EOS_CALL FAchievements::PlayerAchievementsReceivedCallbackFn(const EOS_Achi
 		return;
 	}
 
-	FDebugLog::Log(L"[EOS SDK] Achievements - Get Player Achievements Completed - User ID: %ls", FStringUtils::Widen(FAccountHelpers::ProductUserIDToString(Data->UserId)).c_str());
+	FDebugLog::Log(L"[EOS SDK] Achievements - Get Player Achievements Completed - LocalUserId: %ls, TargetUserId: %ls", FStringUtils::Widen(FAccountHelpers::ProductUserIDToString(Data->LocalUserId)).c_str(), FStringUtils::Widen(FAccountHelpers::ProductUserIDToString(Data->TargetUserId)).c_str());
 
-	FGame::Get().GetAchievements()->CachePlayerAchievements(Data->UserId);
+	FGame::Get().GetAchievements()->CachePlayerAchievements(Data->TargetUserId);
 
-	FGameEvent Event(EGameEventType::PlayerAchievementsReceived, Data->UserId);
+	FGameEvent Event(EGameEventType::PlayerAchievementsReceived, Data->TargetUserId);
 	FGame::Get().OnGameEvent(Event);
 }
 
 void EOS_CALL FAchievements::UnlockAchievementsReceivedCallbackFn(const EOS_Achievements_OnUnlockAchievementsCompleteCallbackInfo* Data)
 {
 	assert(Data != NULL);
+
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
 
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{
@@ -321,6 +327,12 @@ void EOS_CALL FAchievements::UnlockAchievementsReceivedCallbackFn(const EOS_Achi
 void EOS_CALL FAchievements::StatsIngestCallbackFn(const EOS_Stats_IngestStatCompleteCallbackInfo* Data)
 {
 	assert(Data != NULL);
+
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
 
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{
@@ -337,6 +349,12 @@ void EOS_CALL FAchievements::StatsIngestCallbackFn(const EOS_Stats_IngestStatCom
 void EOS_CALL FAchievements::StatsQueryCallbackFn(const EOS_Stats_OnQueryStatsCompleteCallbackInfo* Data)
 {
 	assert(Data != NULL);
+
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
 
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{

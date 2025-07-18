@@ -128,7 +128,7 @@ void FSessionInviteReceivedDialog::SetSessionInfo(const std::wstring& InFriendNa
 	std::wstring LevelName;
 	for (FSession::Attribute& Attr : Session.Attributes)
 	{
-		if (Attr.Key == "Level" || Attr.Key == "LEVEL")
+		if (Attr.Key == SESSION_KEY_LEVEL)
 		{
 			LevelName = FStringUtils::Widen(Session.Attributes[0].AsString);
 		}

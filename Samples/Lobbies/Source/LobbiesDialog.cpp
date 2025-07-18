@@ -65,6 +65,7 @@ static FLobbyMemberTableRowData BuildMemberRow(const FLobbyMember& Member, const
 	Result.ValueColors[FLobbyMemberTableRowData::EValue::DisplayName] = bIsSelf ? Color::Cyan : Color::White;
 	Result.Values[FLobbyMemberTableRowData::EValue::IsOwner] = CurrentLobby.IsOwner(Result.UserId) ? L"Owner" : L"Member";
 	Result.Values[FLobbyMemberTableRowData::EValue::Skin] = FStringUtils::Widen(FLobbyMember::GetSkinString(Member.CurrentSkin));
+	Result.ValueColors[FLobbyMemberTableRowData::EValue::Skin] = FLobbyMember::GetSkinColor(Member.CurrentColor);
 
 	// Count how many members we have currently connected to the RTC room
 	size_t ConnectedMembers = 0;
@@ -129,6 +130,7 @@ static FLobbyMemberTableRowData BuildMemberRow(const FLobbyMember& Member, const
 	Result.bActionsAvailable[FLobbyMemberTableRowData::EAction::Kick] = std::make_pair(bOwnerMode && !bIsSelf, Color::DarkRed);
 	Result.bActionsAvailable[FLobbyMemberTableRowData::EAction::Promote] =  std::make_pair(bOwnerMode && !bIsSelf, Color::DarkGreen);
 	Result.bActionsAvailable[FLobbyMemberTableRowData::EAction::ShuffleSkin] =  std::make_pair(bIsSelf, Color::DarkBlue);
+	Result.bActionsAvailable[FLobbyMemberTableRowData::EAction::ChangeColor] = std::make_pair(bIsSelf && CurrentLobby.bRTCRoomConnected, Color::ForestGreen);
 
 	FColor MuteButtonColor;
 	if (bIsSelf)

@@ -37,6 +37,7 @@ struct FLobbyMemberTableRowData
 			ShuffleSkin,
 			MuteAudio,
 			HardMuteAudio,
+			ChangeColor,
 			Count
 		};
 		EAction() = delete;

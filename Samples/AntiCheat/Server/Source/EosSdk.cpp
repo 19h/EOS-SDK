@@ -31,7 +31,7 @@ constexpr char SampleConstants::GameName[];
 
 EOS_Bool FEosSdk::LoadAndInitSdk()
 {
-	FDebugLog::Log(L"EOS SDK] Initializing ...");
+	FDebugLog::Log(L"[EOS SDK] Initializing ...");
 
 	// Init EOS SDK
 	EOS_InitializeOptions SDKOptions = {};
@@ -48,37 +48,37 @@ EOS_Bool FEosSdk::LoadAndInitSdk()
 	EOS_EResult InitResult = EOS_Initialize(&SDKOptions);
 	if (InitResult != EOS_EResult::EOS_Success)
 	{
-		FDebugLog::Log(L"EOS SDK] Init Failed!");
+		FDebugLog::Log(L"[EOS SDK] Init Failed!");
 		return EOS_FALSE;
 	}
 
-	FDebugLog::Log(L"EOS SDK] Initialized. Setting Logging Callback ...");
+	FDebugLog::Log(L"[EOS SDK] Initialized. Setting Logging Callback ...");
 
 	EOS_EResult SetLogCallbackResult = EOS_Logging_SetCallback([](const EOS_LogMessage* InMsg) {
 		if (InMsg != nullptr && InMsg->Level != EOS_ELogLevel::EOS_LOG_Off)
 		{
 			if (InMsg->Level == EOS_ELogLevel::EOS_LOG_Error || InMsg->Level == EOS_ELogLevel::EOS_LOG_Fatal)
 			{
-				FDebugLog::Log(L"EOS SDK] ERROR %ls: %ls", FStringUtils::Widen(InMsg->Category).c_str(), FStringUtils::Widen(InMsg->Message).c_str());
+				FDebugLog::Log(L"[EOS SDK] ERROR %ls: %ls", FStringUtils::Widen(InMsg->Category).c_str(), FStringUtils::Widen(InMsg->Message).c_str());
 			}
 			else if (InMsg->Level == EOS_ELogLevel::EOS_LOG_Warning)
 			{
-				FDebugLog::Log(L"EOS SDK] WARNING %ls: %ls", FStringUtils::Widen(InMsg->Category).c_str(), FStringUtils::Widen(InMsg->Message).c_str());
+				FDebugLog::Log(L"[EOS SDK] WARNING %ls: %ls", FStringUtils::Widen(InMsg->Category).c_str(), FStringUtils::Widen(InMsg->Message).c_str());
 			}
 			else
 			{
-				FDebugLog::Log(L"EOS SDK] %ls: %ls", FStringUtils::Widen(InMsg->Category).c_str(), FStringUtils::Widen(InMsg->Message).c_str());
+				FDebugLog::Log(L"[EOS SDK] %ls: %ls", FStringUtils::Widen(InMsg->Category).c_str(), FStringUtils::Widen(InMsg->Message).c_str());
 			}
 		}
 	});
 
 	if (SetLogCallbackResult != EOS_EResult::EOS_Success)
 	{
-		FDebugLog::Log(L"EOS SDK] Set Logging Callback Failed!");
+		FDebugLog::Log(L"[EOS SDK] Set Logging Callback Failed!");
 	}
 	else
 	{
-		FDebugLog::Log(L"EOS SDK] Logging Callback Set");
+		FDebugLog::Log(L"[EOS SDK] Logging Callback Set");
 		EOS_Logging_SetLogLevel(EOS_ELogCategory::EOS_LC_ALL_CATEGORIES, EOS_ELogLevel::EOS_LOG_VeryVerbose);
 	}
 
@@ -185,6 +185,12 @@ EOS_Bool FEosSdk::LoadAndInitSdk()
 
 EOS_Bool FEosSdk::Shutdown()
 {
+	if (PlatformHandle != nullptr)
+	{
+		EOS_Platform_Release(PlatformHandle);
+		PlatformHandle = nullptr;
+	}
+
 	EOS_EResult ShutdownResult = EOS_Shutdown();
 
 	if (ShutdownResult != EOS_EResult::EOS_Success)

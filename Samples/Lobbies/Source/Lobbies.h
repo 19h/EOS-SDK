@@ -7,6 +7,7 @@
 #include <eos_lobby_types.h>
 #include <eos_rtc_types.h>
 #include <eos_rtc_audio_types.h>
+#include <eos_rtc_data_types.h>
 
 /**
  * Simple Attribute struct to contain lobby attribute information. It can have a value from one of the available types.
@@ -66,6 +67,16 @@ struct FLobbyMember
 		Count
 	};
 
+	enum class SkinColor : uint8_t
+	{
+		White = 0,
+		Yellow,
+		LightGreen,
+		Pink,
+		Aqua,
+		Count
+	};
+
 	std::wstring GetAttributesString() const;
 	void ShuffleSkin()
 	{
@@ -75,7 +86,15 @@ struct FLobbyMember
 			CurrentSkin = Skin::Peasant;
 		}
 	}
+	void ShuffleColor()
+	{
+		CurrentColor = static_cast<SkinColor>(static_cast<int32_t>(CurrentColor) + 1);
+		if (CurrentColor >= SkinColor::Count)
+		{
+			CurrentColor = SkinColor::White;
+		}
 
+	}
 	static std::string GetSkinString(Skin InSkin)
 	{
 		switch (InSkin)
@@ -95,6 +114,25 @@ struct FLobbyMember
 		}
 
 		return "INVALID";
+	}
+
+	static FColor GetSkinColor(SkinColor InColor)
+	{
+		switch (InColor)
+		{
+		case SkinColor::White:
+			return Color::White;
+		case SkinColor::Yellow:
+			return Color::Yellow;
+		case SkinColor::LightGreen:
+			return Color::LightGreen;
+		case SkinColor::Pink:
+			return Color::Pink;
+		case SkinColor::Aqua:
+			return Color::Aqua;
+		default:
+			return Color::White;
+		}
 	}
 
 	void InitSkinFromString(const std::string& SkinString)
@@ -117,6 +155,7 @@ struct FLobbyMember
 	FProductUserId ProductId;
 	std::wstring DisplayName;
 	Skin CurrentSkin = Skin::Peasant;
+	SkinColor CurrentColor = SkinColor::White;
 	std::vector<FLobbyAttribute> MemberAttributes;
 
 	/** Container for all RTC-related state of this lobby member */
@@ -216,6 +255,8 @@ struct FLobby
 	EOS_NotificationId RTCRoomParticipantUpdate = EOS_INVALID_NOTIFICATIONID;
 	/** Notification for RTC audio updates (talking status or mute changes) */
 	EOS_NotificationId RTCRoomParticipantAudioUpdate = EOS_INVALID_NOTIFICATIONID;
+	/** Notification for RTC data receiving */
+	EOS_NotificationId RTCRoomDataReceived = EOS_INVALID_NOTIFICATIONID;
 
 	//Utility data
 	bool bBeingCreated = false;
@@ -320,6 +361,12 @@ struct FLobbyJoinRequest
 		LobbyInfo.reset();
 		bPresenceEnabled = false;
 	}
+};
+
+/* Command type using with RTC Data channel*/
+enum class ELobbyRTCDataCommand : uint8_t
+{
+	SkinColor = 0
 };
 
 /**
@@ -433,6 +480,7 @@ public:
 	void SendInvite(FProductUserId TargetUserId);
 	void ShuffleSkin(); //Toggles your own skin (member attribute) between possible options
 	void ShuffleColor(); // Toggle your own color between possible options
+	void SendSkinColorUpdate(FLobbyMember::SkinColor InColor);
 	void MuteAudio(FProductUserId TargetUserId);
 	void ToggleHardMuteMember(FProductUserId TargetUserId);
 	void HardMuteMember(FProductUserId TargetUserId, bool bIsHardMuted); // mute player for everyone in the lobby
@@ -472,6 +520,7 @@ public:
 	void OnKickedFromLobby(EOS_LobbyId Id);
 	void OnLobbyLeftOrDestroyed(EOS_LobbyId Id);
 	void OnHardMuteMemberFinished(EOS_LobbyId Id, FProductUserId ParticipantId, EOS_EResult Result);
+	void OnSkinColorChanged(FProductUserId ParticipantId, const FLobbyMember::SkinColor InColor);
 
 	void OnRTCRoomConnectionChanged(EOS_LobbyId Id, FProductUserId LocalUserId, bool bIsConnected);
 	void OnRTCRoomParticipantJoined(const char* RoomName, FProductUserId ParticipantId);
@@ -479,6 +528,7 @@ public:
 	void OnRTCRoomParticipantAudioUpdated(const char* RoomName, FProductUserId ParticipantId, bool bIsTalking, bool bIsMuted, bool bIsHardMuted);
 	void OnRTCRoomUpdateSendingComplete(const char* RoomName, FProductUserId ParticipantId, EOS_ERTCAudioStatus NewAudioStatus);
 	void OnRTCRoomUpdateReceivingComplete(const char* RoomName, FProductUserId ParticipantId, bool bIsMuted);
+	void OnRTCRoomDataReceived(const char* RoomName, FProductUserId ParticipantId, const void* Data, uint32_t DataLengthBytes);
 
 	//Callbacks
 	static void EOS_CALL OnCreateLobbyFinished(const EOS_Lobby_CreateLobbyCallbackInfo* Data);
@@ -506,6 +556,7 @@ public:
 	static void EOS_CALL OnRTCRoomParticipantAudioUpdateRecieved(const EOS_RTCAudio_ParticipantUpdatedCallbackInfo* Data);
 	static void EOS_CALL OnRTCRoomUpdateSendingComplete(const EOS_RTCAudio_UpdateSendingCallbackInfo* Data);
 	static void EOS_CALL OnRTCRoomUpdateReceivingComplete(const EOS_RTCAudio_UpdateReceivingCallbackInfo* Data);
+	static void EOS_CALL OnRTCRoomDataReceived(const EOS_RTCData_DataReceivedCallbackInfo* Data);
 
 	static void EOS_CALL OnLeaveLobbyRequested(const EOS_Lobby_LeaveLobbyRequestedCallbackInfo* Data);
 

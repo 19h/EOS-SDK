@@ -90,6 +90,12 @@ void EOS_CALL FP2PNAT::OnRefreshNATTypeFinished(const EOS_P2P_OnQueryNATTypeComp
 {
 	if (Data)
 	{
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+
 		if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"EOS P2PNAT QueryNATType callback: error code %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());

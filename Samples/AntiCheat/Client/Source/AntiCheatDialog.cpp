@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "Game.h"
+#include "Authentication.h"
 #include "AntiCheatDialog.h"
 #include "AntiCheatClient.h"
 #include "DebugLog.h"
@@ -310,6 +311,10 @@ void FAntiCheatDialog::OnGameEvent(const FGameEvent& Event)
 	{
 		ShowUI();
 	}
+	else if (Event.GetType() == EGameEventType::AntiCheatKicked)
+	{
+		LeaveGame();
+	}
 }
 
 void FAntiCheatDialog::OnJoinGameButtonPressed()
@@ -317,14 +322,23 @@ void FAntiCheatDialog::OnJoinGameButtonPressed()
 	const PlayerPtr Player = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser());
 	if (!Player)
 	{
-		FDebugLog::LogError(L"TestDialog - OnJoinGameButtonPressed: Current player is invalid!");
+		FDebugLog::LogError(L"AntiCheatDialog - OnJoinGameButtonPressed: Current player is invalid!");
 		return;
 	}
 
 	const std::string IP = FStringUtils::Narrow(IPField->GetText());
 	const int Port = std::stoi(PortField->GetText());
 
-	const bool bDidSessionBegin = FGame::Get().GetAntiCheatClient()->Start(IP, Port, Player->GetProductUserID());
+	// Get a Connect ID Token which will be sent to the server as part of the registration message.
+	EOS_ProductUserId ProductUserId = Player->GetProductUserID();
+	std::string ConnectIdToken = FGame::Get().GetAuthentication()->GetConnectIdToken(ProductUserId);
+	if (ConnectIdToken.empty())
+	{
+		FDebugLog::LogError(L"AntiCheatDialog - OnJoinGameButtonPressed: Failed to get Connect ID Token!");
+		return;
+	}
+
+	const bool bDidSessionBegin = FGame::Get().GetAntiCheatClient()->Start(IP, Port, Player->GetProductUserID(), ConnectIdToken.c_str());
 	if (bDidSessionBegin)
 	{
 		JoinGameButton->Disable();

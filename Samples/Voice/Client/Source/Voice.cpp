@@ -1295,6 +1295,12 @@ void EOS_CALL FVoice::OnJoinRoomCb(const EOS_RTC_JoinRoomCallbackInfo* Data)
 {
 	assert(Data != NULL);
 
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
+
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{
 		FDebugLog::LogError(L"[EOS SDK] Voice - Join Room Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
@@ -1310,6 +1316,12 @@ void EOS_CALL FVoice::OnJoinRoomCb(const EOS_RTC_JoinRoomCallbackInfo* Data)
 void EOS_CALL FVoice::OnLeaveRoomCb(const EOS_RTC_LeaveRoomCallbackInfo* Data)
 {
 	assert(Data != NULL);
+
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
 
 	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{
@@ -1328,6 +1340,11 @@ void EOS_CALL FVoice::OnSetPresenceCb(const EOS_Presence_SetPresenceCallbackInfo
 	if (!Data)
 	{
 		FDebugLog::LogError(L"Voice (OnSetPresenceCallback): EOS_Presence_SetPresenceCallbackInfo is null");
+	}
+	else if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
 	}
 	else if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{
@@ -1444,7 +1461,12 @@ void EOS_CALL FVoice::OnUpdateReceivingVolumeCb(const EOS_RTCAudio_UpdateReceivi
 {
 	if (Data)
 	{
-		if (Data->ResultCode != EOS_EResult::EOS_Success)
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+		else if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"Voice (OnUpdateReceivingVolumeCb) - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
 		}
@@ -1463,7 +1485,12 @@ void EOS_CALL FVoice::OnUpdateParticipantVolumeCb(const EOS_RTCAudio_UpdateParti
 {
 	if (Data)
 	{
-		if (Data->ResultCode != EOS_EResult::EOS_Success)
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+		else if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"Voice (OnUpdateParticipantVolumeCb) - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
 		}
@@ -1483,7 +1510,12 @@ void EOS_CALL FVoice::OnInputDevicesInformationCb(const EOS_RTCAudio_OnQueryInpu
 {
 	if (Data)
 	{
-		if (Data->ResultCode != EOS_EResult::EOS_Success)
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+		else if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"Voice (OnInputDevicesInformationCb) - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
 		}
@@ -1502,7 +1534,12 @@ void EOS_CALL FVoice::OnOutputDevicesInformationCb(const EOS_RTCAudio_OnQueryOut
 {
 	if (Data)
 	{
-		if (Data->ResultCode != EOS_EResult::EOS_Success)
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+		else if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"Voice (OnOutputDevicesInformationCb) - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
 		}
@@ -1521,7 +1558,12 @@ void EOS_CALL FVoice::OnSetAudioInputDeviceCb(const EOS_RTCAudio_OnSetInputDevic
 {
 	if (Data)
 	{
-		if (Data->ResultCode != EOS_EResult::EOS_Success)
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+		else if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"[EOS SDK] Voice - Failed to update audio input - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
 		}
@@ -1540,7 +1582,12 @@ void EOS_CALL FVoice::OnSetAudioOutputDeviceCb(const EOS_RTCAudio_OnSetOutputDev
 {
 	if (Data)
 	{
-		if (Data->ResultCode != EOS_EResult::EOS_Success)
+		if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+		{
+			// Operation is retrying so it is not complete yet
+			return;
+		}
+		else if (Data->ResultCode != EOS_EResult::EOS_Success)
 		{
 			FDebugLog::LogError(L"[EOS SDK] Voice - Failed to update audio output - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
 		}
