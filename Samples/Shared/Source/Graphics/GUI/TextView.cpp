@@ -759,3 +759,21 @@ void FTextViewWidget::EnableScroller()
 		CreateScroller();
 	}
 }
+
+bool FTextViewWidget::HasInitialText() const
+{
+	if (Lines.Num() == 1 &&
+		!InitialTextValue.empty() &&
+		InitialTextValue == Lines[0].GetMessage())
+	{
+		return true;
+	}
+
+	return false;
+}
+
+bool FTextViewWidget::IsEmpty() const
+{
+	return Lines.Num() == 0 || 
+		(Lines.Num() == 1 && Lines[0].GetMessage().empty());
+}

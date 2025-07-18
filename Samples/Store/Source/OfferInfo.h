@@ -12,9 +12,19 @@ class FUIEvent;
 class FButtonWidget;
 class FTextLabelWidget;
 class FSpriteWidget;
+struct FOfferData;
 
 /**
-* Offers info widget
+ * A struct to hold the offer info button related parameters.
+ */
+struct FOfferInfoButtonParams
+{
+	std::wstring ButtonName;
+	std::function<void(const FOfferData&)> OnButtonClicked;
+};
+
+/**
+* A reusable widget used to display an individual offer in both the Catalog and the Cart.
 */
 class FOfferInfoWidget : public IWidget
 {
@@ -27,7 +37,8 @@ public:
 		UILayer InfoLayer,
 		FOfferData OfferData,
 		FontPtr InfoLargeFont,
-		FontPtr InfoSmallFont);
+		FontPtr InfoSmallFont,
+		const FOfferInfoButtonParams& InfoButtonParams);
 
 	/**
 	* No copying or copy assignment allowed for this class.
@@ -72,11 +83,11 @@ private:
 	/** Name Label */
 	std::shared_ptr<FTextLabelWidget> NameLabel;
 
-	/** Button one */
-	std::shared_ptr<FButtonWidget> Button1;
+	/** Button */
+	std::shared_ptr<FButtonWidget> Button;
 
-	/** Button two */
-	std::shared_ptr<FButtonWidget> Button2;
+	/** Button params */
+	FOfferInfoButtonParams ButtonParams;
 
 	/** Large Font */
 	FontPtr LargeFont;

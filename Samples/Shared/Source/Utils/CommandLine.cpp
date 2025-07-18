@@ -26,6 +26,7 @@ constexpr wchar_t CommandLineConstants::ScopesFriendsList[];
 constexpr wchar_t CommandLineConstants::ScopesPresence[];
 constexpr wchar_t CommandLineConstants::ScopesFriendsManagement[];
 constexpr wchar_t CommandLineConstants::ScopesEmail[];
+constexpr wchar_t CommandLineConstants::ScopesCountry[];
 constexpr wchar_t CommandLineConstants::AssetDir[];
 constexpr wchar_t CommandLineConstants::Server[];
 constexpr wchar_t CommandLineConstants::ServerURL[];
@@ -52,7 +53,7 @@ FCommandLine& FCommandLine::Get()
 void FCommandLine::Init(LPWSTR CmdLine)
 {
 	std::vector<std::wstring> Arglist;
-	std::wstring CommandLine = CmdLine;
+	CommandLine = CmdLine;
 	std::wstring::size_type TokenizeStartPos = CommandLine.find_first_of(L' ') + 1;
 	std::wstring::size_type TokenizeEndPos = CommandLine.find_first_of(L' ', TokenizeStartPos);
 
@@ -252,4 +253,9 @@ bool FCommandLine::HasFlagParam(const std::wstring& Param)
 	}
 
 	return false;
+}
+
+const std::wstring& FCommandLine::GetString() const
+{
+	return CommandLine;
 }

@@ -446,7 +446,7 @@ xcopy /D /Y /R /Q $(EOSSDKSamplesRoot)\Shared\External\SDL2\SDL2_ttf\lib\x64\zli
     <ClInclude Include="..\Shared\Source\Core\Users.h" />
     <ClInclude Include="..\Shared\Source\Graphics\Console.h" />
     <ClInclude Include="..\Shared\Source\Graphics\GfxComponent.h" />
-	<ClInclude Include="..\Shared\Source\Graphics\GUI\AssetUtils.h" />
+    <ClInclude Include="..\Shared\Source\Graphics\GUI\AssetUtils.h" />
     <ClInclude Include="..\Shared\Source\Graphics\GUI\AnimatedTexture.h" />
     <ClInclude Include="..\Shared\Source\Graphics\GUI\AuthDialogs.h" />
     <ClInclude Include="..\Shared\Source\Graphics\GUI\Button.h" />
@@ -499,6 +499,7 @@ xcopy /D /Y /R /Q $(EOSSDKSamplesRoot)\Shared\External\SDL2\SDL2_ttf\lib\x64\zli
     <ClInclude Include="Source\Level.h" />
     <ClInclude Include="Source\Menu.h" />
     <ClInclude Include="Source\NewSessionDialog.h" />
+    <ClInclude Include="Source\RequestToJoinSessionReceivedDialog.h" />
     <ClInclude Include="Source\SampleConstants.h" />
     <ClInclude Include="Source\SessionInviteReceivedDialog.h" />
     <ClInclude Include="Source\SessionMatchmaking.h" />
@@ -518,7 +519,7 @@ xcopy /D /Y /R /Q $(EOSSDKSamplesRoot)\Shared\External\SDL2\SDL2_ttf\lib\x64\zli
     <ClCompile Include="..\Shared\Source\Core\Player.cpp" />
     <ClCompile Include="..\Shared\Source\Core\Users.cpp" />
     <ClCompile Include="..\Shared\Source\Graphics\Console.cpp" />
-	<ClCompile Include="..\Shared\Source\Graphics\GUI\AssetUtils.cpp" />
+    <ClCompile Include="..\Shared\Source\Graphics\GUI\AssetUtils.cpp" />
     <ClCompile Include="..\Shared\Source\Graphics\GUI\AnimatedTexture.cpp" />
     <ClCompile Include="..\Shared\Source\Graphics\GUI\AuthDialogs.cpp" />
     <ClCompile Include="..\Shared\Source\Graphics\GUI\Button.cpp" />
@@ -574,6 +575,7 @@ xcopy /D /Y /R /Q $(EOSSDKSamplesRoot)\Shared\External\SDL2\SDL2_ttf\lib\x64\zli
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\Menu.cpp" />
     <ClCompile Include="Source\NewSessionDialog.cpp" />
+    <ClCompile Include="Source\RequestToJoinSessionReceivedDialog.cpp" />
     <ClCompile Include="Source\SessionInviteReceivedDialog.cpp" />
     <ClCompile Include="Source\SessionMatchmaking.cpp" />
     <ClCompile Include="Source\SessionMatchmakingDialog.cpp" />

@@ -75,6 +75,7 @@ struct FLobbyMember
 			CurrentSkin = Skin::Peasant;
 		}
 	}
+
 	static std::string GetSkinString(Skin InSkin)
 	{
 		switch (InSkin)
@@ -172,6 +173,19 @@ struct FLobby
 			if (NextAttr.Key == AttrKey)
 			{
 				return &NextAttr;
+			}
+		}
+
+		return nullptr;
+	}
+
+	FLobbyMember* GetMemberByProductUserId(const FProductUserId& ProductId)
+	{
+		for (FLobbyMember& LobbyMember : Members)
+		{
+			if (LobbyMember.ProductId == ProductId)
+			{
+				return &LobbyMember;
 			}
 		}
 
@@ -418,6 +432,7 @@ public:
 	void LeaveLobby();
 	void SendInvite(FProductUserId TargetUserId);
 	void ShuffleSkin(); //Toggles your own skin (member attribute) between possible options
+	void ShuffleColor(); // Toggle your own color between possible options
 	void MuteAudio(FProductUserId TargetUserId);
 	void ToggleHardMuteMember(FProductUserId TargetUserId);
 	void HardMuteMember(FProductUserId TargetUserId, bool bIsHardMuted); // mute player for everyone in the lobby
@@ -427,6 +442,8 @@ public:
 	//Search for lobby
 	void Search(const std::vector<FLobbyAttribute>& SearchAttributes, uint32_t MaxNumResults = 10);
 	void Search(const std::string& LobbyId, uint32_t MaxNumResults);
+	void SearchLobbyByLevel(const std::string& LevelName);
+	void SearchLobbyByBucketId(const std::string& BucketId);
 	void ClearSearch();
 
 	void SubscribeToLobbyUpdates();
@@ -434,6 +451,9 @@ public:
 
 	void SubscribeToLobbyInvites();
 	void UnsubscribeFromLobbyInvites();
+
+	void SubscribeToLeaveLobbyUI();
+	void UnsubscribeFromLeaveLobbyUI();
 
 	std::string GetRTCRoomName();
 
@@ -487,6 +507,8 @@ public:
 	static void EOS_CALL OnRTCRoomUpdateSendingComplete(const EOS_RTCAudio_UpdateSendingCallbackInfo* Data);
 	static void EOS_CALL OnRTCRoomUpdateReceivingComplete(const EOS_RTCAudio_UpdateReceivingCallbackInfo* Data);
 
+	static void EOS_CALL OnLeaveLobbyRequested(const EOS_Lobby_LeaveLobbyRequestedCallbackInfo* Data);
+
 private:
 
 	/**
@@ -525,6 +547,7 @@ private:
 	EOS_NotificationId LobbyInviteNotification = EOS_INVALID_NOTIFICATIONID;
 	EOS_NotificationId LobbyInviteAcceptedNotification = EOS_INVALID_NOTIFICATIONID;
 	EOS_NotificationId JoinLobbyAcceptedNotification = EOS_INVALID_NOTIFICATIONID;
+	EOS_NotificationId LeaveLobbyRequestedNotification = EOS_INVALID_NOTIFICATIONID;
 
 	bool bLobbyLeaveInProgress = false;
 	bool bDirty = true;

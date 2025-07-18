@@ -15,7 +15,7 @@ struct FStatInfo
 	std::wstring Name;
 
 	/** Stat threshold value. */
-	int32_t ThresholdValue;
+	int32_t ThresholdValue = 0;
 };
 
 /**
@@ -42,7 +42,7 @@ struct FAchievementsDefinitionData
 	/** URL of an icon to display for the achievement when it is locked or hidden. This may be null if there is no data configured in the dev portal */
 	std::wstring LockedIconURL;
 	/** True if achievement is hidden, false otherwise. */
-	EOS_Bool bIsHidden;
+	EOS_Bool bIsHidden = EOS_FALSE;
 	/** Array of info for stats info. */
 	std::vector<FStatInfo> StatInfo;
 };
@@ -53,10 +53,10 @@ struct FAchievementsDefinitionData
 struct FStatProgress
 {
 	/** Current value of player stat. */
-	int32_t CurValue;
+	int32_t CurValue = 0;
 
 	/** Threshold value of player stat. */
-	int32_t ThresholdValue;
+	int32_t ThresholdValue = 0;
 };
 
 /**
@@ -70,9 +70,9 @@ struct FPlayerAchievementData
 	/** Achievement ID that can be used to uniquely identify the achievement. */
 	std::wstring AchievementId;
 	/** Progress towards completing this achievement (as a percentage). */
-	double Progress;
+	double Progress = 0.0;
 	/** If not EOS_ACHIEVEMENTS_ACHIEVEMENT_UNLOCKTIME_UNDEFINED then this is the POSIX timestamp that the achievement was unlocked */
-	int64_t UnlockTime;
+	int64_t UnlockTime = 0;
 	/** Array of info for player stats progress. */
 	std::map<std::wstring, FStatProgress> Stats;
 };
@@ -87,11 +87,11 @@ struct FStatData
 	/** Stat name. */
 	std::wstring Name;
 	/** If not EOS_STATS_TIME_UNDEFINED then this is the POSIX timestamp for Start Time */
-	int64_t StartTime;
+	int64_t StartTime = 0;
 	/** If not EOS_STATS_TIME_UNDEFINED then this is the POSIX timestamp for End Time */
-	int64_t EndTime;
+	int64_t EndTime = 0;
 	/** Stat value */
-	int Value;
+	int Value = 0;
 };
 
 /**
@@ -103,7 +103,7 @@ public:
 	/** Name of Stat to ingest */
 	std::wstring Name;
 	/** Ingest amount */
-	int Amount;
+	int Amount = 0;
 };
 
 /**
@@ -272,6 +272,15 @@ public:
 	void IngestStat(const std::wstring& StatName, int Amount);
 
 	/**
+	 * Starts requesting stats ingest for single stat
+	 *
+	 * @param StatName - Name of Stat to ingest
+	 * @param Amount - Amount to ingest
+	 * @param TargetUserId - User ID for the target user whose stat we're ingesting
+	 */
+	void IngestStat(const std::wstring& StatName, int Amount, FProductUserId TargetUserId);
+
+	/**
 	 * Starts querying stats for current user
 	 */
 	void QueryStats();
@@ -341,13 +350,13 @@ private:
 	std::wstring DefaultLanguage;
 
 	/** Handle to EOS SDK achievements system */
-	EOS_HAchievements AchievementsHandle;
+	EOS_HAchievements AchievementsHandle = nullptr;
 
 	/** Handle to EOS SDK stats system */
-	EOS_HStats StatsHandle;
+	EOS_HStats StatsHandle = nullptr;
 
 	/** Notification Id for achievement unlocked */
-	EOS_NotificationId AchievementsUnlockedNotificationId;
+	EOS_NotificationId AchievementsUnlockedNotificationId = EOS_INVALID_NOTIFICATIONID;
 
 	/** Cached data with user achievement definitions */
 	std::vector<std::shared_ptr<FAchievementsDefinitionData>> CachedAchievementsDefinitionData;

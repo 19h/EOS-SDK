@@ -212,7 +212,7 @@ private:
 	void FetchMods(EOS_EModEnumerationType Type);
 
 	/**
-	* Updates internal state after successfull request.
+	* Updates internal state after successful request.
 	*/
 	void UpdateStateAfterRequestCompletion();
 

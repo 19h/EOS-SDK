@@ -341,21 +341,7 @@ void FConsoleDialog::OnUIEvent(const FUIEvent& Event)
 			{
 				if (auto ConsoleLocked = Console.lock())
 				{
-					std::wstring Command = TextValue.substr(0, TextValue.find(L' '));
-					std::vector<std::wstring> Args;
-
-					auto Cursor = TextValue.find(L' ');
-					while (Cursor != std::wstring::npos && Cursor < TextValue.size() - 1)
-					{
-						Cursor = Cursor + 1;
-						auto NextCursor = TextValue.find(L' ', Cursor);
-						std::wstring NextArg = TextValue.substr(Cursor, NextCursor - Cursor);
-						if (NextArg.size() > 0)
-							Args.push_back(NextArg);
-						Cursor = NextCursor;
-					}
-
-					ConsoleLocked->RunCommand(Command, Args);
+					ConsoleLocked->RunCommand(TextValue);
 				}
 				TextInputField->Clear();
 			}

@@ -11,9 +11,10 @@
  */
 class FGameEvent;
 class FSpriteWidget;
-class FTextEditorWidget;
 
-//Structure to store all data related to chat with a friend.
+/**
+ * Structure to store all data related to chat with a friend.
+ */
 struct FChatWithFriendData
 {
 	//bool defines who's line it was: yours (when true) or someone else's
@@ -49,8 +50,8 @@ public:
 	virtual ~FP2PNATDialog() {};
 
 	/**
-	* IGfxComponent Overrides
-	*/
+	 * IGfxComponent Overrides
+	 */
 	virtual void Update() override;
 	virtual void Create() override;
 
@@ -62,27 +63,29 @@ public:
 	void UpdateNATStatus();
 
 	/**
-	* Receives game event
-	*
-	* @param Event - Game event to act on
-	*/
+	 * Receives game event
+	 *
+	 * @param Event - Game event to act on
+	 */
 	void OnGameEvent(const FGameEvent& Event);
 
-	//Find chat data related to particular friend. Creates and returns empty chat when no chat data found.
+	/** Find chat data related to particular friend. Creates and returns empty chat when no chat data found. */
 	FChatWithFriendData& GetChat(FProductUserId FriendId);
 
-	//Who we are chatting with at the moment (returns invalid account id when no chat is active)
+	/** Who we are chatting with at the moment (returns invalid account id when no chat is active) */
 	FProductUserId GetCurrentChat() const { return CurrentChat; }
 
-	//Close current chat
+	/** Close current chat */
 	void CloseCurrentChat();
 
-	//Called when user wants to send text
+	/** Called when user wants to send text */
 	void OnSendMessage(const std::wstring& Value);
 
+	/** Called when a message is received from another user */
 	void OnMessageReceived(const std::wstring& Message, FProductUserId FriendId);
 
 private:
+	/** Splits a multi-line message (with newline characters) into multiple lines of text */
 	void SplitMessageIntoLines(const std::wstring& Message, std::vector<std::wstring>& OutLines);
 
 	/** Header label */

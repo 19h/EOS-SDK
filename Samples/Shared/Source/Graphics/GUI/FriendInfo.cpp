@@ -50,6 +50,7 @@ void FFriendInfoWidget::Create()
 
 	Button1.reset();
 	Button2.reset();
+	Button3.reset();
 
 	bool bIsFriend = (FriendData.Status == EOS_EFriendsStatus::EOS_FS_Friends);
 	bool bIsPlaceholder = (FriendData.bPlaceholder);
@@ -156,8 +157,8 @@ void FFriendInfoWidget::Create()
 		{
 #ifdef EOS_SAMPLE_SESSIONS
 			//Invite to session button (session matchmaking demo only)
-			const float ButtonSize = Size.x * 0.3f;
-			Vector2 ButtonOffset(Size.x - ButtonSize * 2.0f - 10.0f , Size.y * 0.25f);
+			const float ButtonSize = Size.x * 0.2f;
+			Vector2 ButtonOffset(Size.x - (ButtonSize * 4.f) - 15.0f, Size.y * 0.25f);
 
 			FEpicAccountId FriendId = FriendData.UserId;
 			FProductUserId FriendProductUserId = FriendData.UserProductUserId;
@@ -180,7 +181,7 @@ void FFriendInfoWidget::Create()
 				});
 				Button1->SetBackgroundColors(assets::DefaultButtonColors);
 
-				ButtonOffset.x = Size.x - ButtonSize;
+				ButtonOffset.x = ButtonOffset.x + ButtonSize + 5.f;
 
 				Button2 = std::make_shared<FButtonWidget>(
 					Position + ButtonOffset,
@@ -197,6 +198,24 @@ void FFriendInfoWidget::Create()
 					FGame::Get().OnGameEvent(Event);
 				});
 				Button2->SetBackgroundColors(assets::DefaultButtonColors);
+
+				ButtonOffset.x = ButtonOffset.x + ButtonSize + 5.f;
+
+				Button3 = std::make_shared<FButtonWidget>(
+					Position + ButtonOffset,
+					Vector2(ButtonSize, Size.y / 2.0f),
+					Layer - 1,
+					L"Request To Join Session",
+					assets::DefaultButtonAssets,
+					SmallFont,
+					assets::DefaultButtonColors[static_cast<size_t>(FButtonWidget::EButtonVisualState::Idle)]);
+				Button3->Create();
+				Button3->SetOnPressedCallback([FriendProductUserId]()
+				{
+					FGameEvent Event(EGameEventType::RequestToJoinFriendSession, FriendProductUserId);
+					FGame::Get().OnGameEvent(Event);
+				});
+				Button3->SetBackgroundColors(assets::DefaultButtonColors);
 			}
 #elif defined(EOS_SAMPLE_P2P) || defined (EOS_SAMPLE_VOICE)
 			//Start chat button (p2p demo only)
@@ -318,6 +337,7 @@ void FFriendInfoWidget::Release()
 
 	Button1.reset();
 	Button2.reset();
+	Button3.reset();
 }
 
 void FFriendInfoWidget::Update()
@@ -411,6 +431,11 @@ void FFriendInfoWidget::Update()
 	{
 		Button2->Update();
 	}
+
+	if (Button3)
+	{
+		Button3->Update();
+	}
 }
 
 void FFriendInfoWidget::Render(FSpriteBatchPtr& Batch)
@@ -436,6 +461,11 @@ void FFriendInfoWidget::Render(FSpriteBatchPtr& Batch)
 	{
 		Button2->Render(Batch);
 	}
+
+	if (Button3)
+	{
+		Button3->Render(Batch);
+	}
 }
 
 #ifdef _DEBUG
@@ -447,6 +477,7 @@ void FFriendInfoWidget::DebugRender()
 	if (NameLabel) NameLabel->DebugRender();
 	if (Button1) Button1->DebugRender();
 	if (Button2) Button2->DebugRender();
+	if (Button3) Button3->DebugRender();
 }
 #endif
 
@@ -464,6 +495,10 @@ void FFriendInfoWidget::OnUIEvent(const FUIEvent& event)
 		if (Button2 && Button2->CheckCollision(event.GetVector()))
 		{
 			Button2->OnUIEvent(event);
+		}
+		if (Button3 && Button3->CheckCollision(event.GetVector()))
+		{
+			Button3->OnUIEvent(event);
 		}
 	}
 }
@@ -504,6 +539,11 @@ void FFriendInfoWidget::SetPosition(Vector2 Pos)
 			Button2->SetPosition(Vector2(Pos.x, Button2->GetPosition().y));
 		}
 	}
+
+	if (Button3)
+	{
+		Button3->SetPosition(Vector2(Pos.x, Button3->GetPosition().y));
+	}
 }
 
 void FFriendInfoWidget::SetSize(Vector2 NewSize)
@@ -524,6 +564,11 @@ void FFriendInfoWidget::SetSize(Vector2 NewSize)
 	if (Button2 && FriendData.Status != EOS_EFriendsStatus::EOS_FS_InviteReceived)
 	{
 		Button2->SetSize(Vector2(NewSize.x, Button2->GetSize().y));
+	}
+
+	if (Button3)
+	{
+		Button3->SetSize(Vector2(NewSize.x, Button3->GetSize().y));
 	}
 }
 

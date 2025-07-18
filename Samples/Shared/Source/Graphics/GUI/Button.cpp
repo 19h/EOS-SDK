@@ -135,11 +135,6 @@ void FButtonWidget::OnUIEvent(const FUIEvent& Event)
 	{
 		if (IsEnabled())
 		{
-			if (OnPressedCallback)
-			{
-				OnPressedCallback();
-			}
-
 			if (bAnimated)
 			{
 				std::shared_ptr<FSpriteWidget> Sprite = Label->GetBackgroundImage();
@@ -161,6 +156,11 @@ void FButtonWidget::OnUIEvent(const FUIEvent& Event)
 			}
 
 			Label->SetBackgroundColor(BackgroundColors[size_t((bMouseWasHovered) ? EButtonVisualState::Hovered : EButtonVisualState::Idle)]);
+
+			if (OnPressedCallback)
+			{
+				OnPressedCallback();
+			}
 		}
 		bPressed = false;
 	}

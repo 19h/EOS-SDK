@@ -119,13 +119,14 @@ void FTextFieldWidget::OnUIEvent(const FUIEvent& Event)
 		const std::string InputText = Event.GetInputText();
 		std::wstring InputTextW = FStringUtils::Widen(InputText);
 		std::wstring TextValue = Text;
-		if (!TextValue.empty())
+		if (!TextValue.empty() && CursorPosition <= TextValue.size())
 		{
 			TextValue = TextValue.substr(0, CursorPosition) + InputTextW + TextValue.substr(CursorPosition);
 		}
 		else
 		{
 			TextValue = InputTextW;
+			CursorPosition = 0;
 		}
 		Label->SetText(TextValue);
 		Text = TextValue;
@@ -154,7 +155,7 @@ void FTextFieldWidget::OnUIEvent(const FUIEvent& Event)
 			if (CursorPosition != 0)
 			{
 				std::wstring TextValue = Text;
-				if (!TextValue.empty())
+				if (!TextValue.empty() && CursorPosition <= TextValue.size())
 				{
 					TextValue = TextValue.substr(0, CursorPosition - 1) + TextValue.substr(CursorPosition);
 
@@ -162,6 +163,10 @@ void FTextFieldWidget::OnUIEvent(const FUIEvent& Event)
 					Text = TextValue;
 
 					CursorPosition--;
+				}
+				else
+				{
+					CursorPosition = 0;
 				}
 			}
 		}
@@ -230,13 +235,14 @@ void FTextFieldWidget::OnUIEvent(const FUIEvent& Event)
 			if (bIsValidChar && Label->GetFont()->ContainsCharacter(KeyChar))
 			{
 				std::wstring TextValue = Text;
-				if (!TextValue.empty())
+				if (!TextValue.empty() && CursorPosition <= TextValue.size())
 				{
 					TextValue = TextValue.substr(0, CursorPosition) + KeyChar + TextValue.substr(CursorPosition);
 				}
 				else
 				{
 					TextValue = KeyChar;
+					CursorPosition = 0;
 				}
 				Label->SetText(TextValue);
 				Text = TextValue;
@@ -250,12 +256,6 @@ void FTextFieldWidget::OnUIEvent(const FUIEvent& Event)
 	{
 		FontPtr Font = Label->GetFont();
 		const std::wstring& TextValue = VisibleText;
-
-		if (TextValue == InitialTextValue)
-		{
-			Clear();
-			return;
-		}
 
 		SetFocused(true);
 
@@ -359,11 +359,14 @@ void FTextFieldWidget::InsertTextAtCursor(std::wstring&& PastedText)
 	if (!PastedText.empty())
 	{
 		std::wstring TextValue = Text;
-		TextValue = TextValue.substr(0, CursorPosition) + PastedText + TextValue.substr(CursorPosition);
-		Label->SetText(TextValue);
-		Text = TextValue;
+		if (CursorPosition <= TextValue.size())
+		{
+			TextValue = TextValue.substr(0, CursorPosition) + PastedText + TextValue.substr(CursorPosition);
+			Label->SetText(TextValue);
+			Text = TextValue;
 
-		CursorPosition += PastedTextLength;
+			CursorPosition += PastedTextLength;
+		}
 	}
 }
 
@@ -455,6 +458,11 @@ void FTextFieldWidget::UpdateText()
 
 	VisibleText = TextValue.substr(StartLineIndex, EndLineIndex - StartLineIndex + 1);
 	const size_t AdjustedCursorPos = CursorPosition - StartLineIndex;
+	if (AdjustedCursorPos > VisibleText.size())
+	{
+		// Don't continue if we somehow have a cursor position beyond the size of the visible text
+		return;
+	}
 
 	std::wstring TextToRenderNoCaret = VisibleText.substr(0, AdjustedCursorPos) + VisibleText.substr(AdjustedCursorPos);
 	std::wstring TextToRender = VisibleText.substr(0, AdjustedCursorPos) + CaretStr + VisibleText.substr(AdjustedCursorPos);

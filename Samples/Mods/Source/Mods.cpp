@@ -90,7 +90,7 @@ void FMods::InstallMod(FModId ModId, bool bRemoveAfterExit)
 
 	Command = std::make_unique<FRequest>(FRequest{ std::move(ModId), ERequestType::Install });
 
-	EOS_Mods_InstallModOptions Opt;
+	EOS_Mods_InstallModOptions Opt = {};
 	Opt.ApiVersion = EOS_MODS_INSTALLMOD_API_LATEST;
 	Opt.LocalUserId = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser())->GetUserID();
 	Opt.Mod = &Command->ModIdentifier();
@@ -130,7 +130,7 @@ void FMods::UnInstallMod(FModId ModId)
 
 	Command = std::make_unique<FRequest>(FRequest{ std::move(ModId), ERequestType::Uninstall });
 
-	EOS_Mods_UninstallModOptions Opt;
+	EOS_Mods_UninstallModOptions Opt = {};
 	Opt.ApiVersion = EOS_MODS_UNINSTALLMOD_API_LATEST;
 	Opt.LocalUserId = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser())->GetUserID();
 	Opt.Mod = &Command->ModIdentifier();
@@ -189,7 +189,7 @@ void FMods::UpdateMod(FModId ModId)
 
 	Command = std::make_unique<FRequest>(FRequest{ std::move(ModId), ERequestType::Update });
 
-	EOS_Mods_UpdateModOptions Opt;
+	EOS_Mods_UpdateModOptions Opt = {};
 	Opt.ApiVersion = EOS_MODS_UPDATEMOD_API_LATEST;
 	Opt.LocalUserId = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser())->GetUserID();
 	Opt.Mod = &Command->ModIdentifier();
@@ -240,7 +240,7 @@ void FMods::FetchMods(EOS_EModEnumerationType Type)
 		return;
 	}
 
-	EOS_Mods_EnumerateModsOptions Options;
+	EOS_Mods_EnumerateModsOptions Options = {};
 	Options.ApiVersion = EOS_MODS_ENUMERATEMODS_API_LATEST;
 	Options.LocalUserId = Player->GetUserID();
 	Options.Type = Type;
@@ -271,7 +271,7 @@ void EOS_CALL FMods::OnEnumerateModsComplete(const EOS_Mods_EnumerateModsCallbac
 			return;
 		}
 
-		EOS_Mods_CopyModInfoOptions CopyAsOptions;
+		EOS_Mods_CopyModInfoOptions CopyAsOptions = {};
 		CopyAsOptions.ApiVersion = EOS_MODS_COPYMODINFO_API_LATEST;
 		CopyAsOptions.LocalUserId = Data->LocalUserId;
 		CopyAsOptions.Type = Data->Type;

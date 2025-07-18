@@ -63,3 +63,19 @@ std::string FStringUtils::Narrow(const std::wstring& Str)
 
 	return Result;
 }
+
+std::vector<std::wstring> FStringUtils::Split(const std::wstring& Str, const wchar_t Delimiter)
+{
+	std::vector<std::wstring> Words;
+
+	std::size_t Current, Previous = 0;
+	Current = Str.find(Delimiter);
+	while (Current != std::string::npos) {
+		Words.push_back(Str.substr(Previous, Current - Previous));
+		Previous = Current + 1;
+		Current = Str.find(Delimiter, Previous);
+	}
+	Words.push_back(Str.substr(Previous, Current - Previous));
+
+	return Words;
+}

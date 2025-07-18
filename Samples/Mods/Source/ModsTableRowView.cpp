@@ -18,14 +18,16 @@ namespace ModsTableRowDataHelpers
 		{
 			Str = "-";
 		}
+
+		std::wstring WStr = FStringUtils::Widen(Str);
+
 #ifdef DXTK
-		else if (Str.size() > 16)
+		if (WStr.size() > 16)
 		{
-			Str.insert(Str.size() / 2, "\n");
+			WStr.insert(Str.size() / 2, L"\n");
 		}
 #endif
-
-		return FStringUtils::Widen(Str);
+		return WStr;
 	}
 
 	std::string ToString(const std::wstring& InStr)

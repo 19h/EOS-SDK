@@ -25,9 +25,6 @@ enum class EGameEventType: unsigned char
 	/** User login failed */
 	UserLoginFailed,
 
-	/** User login with device code cancelled */
-	UserLoginDeviceCodeCancel,
-
 	/** User login requires MFA */
 	UserLoginRequiresMFA,
 
@@ -109,8 +106,17 @@ enum class EGameEventType: unsigned char
 	/** Invite to session received */
 	InviteToSessionReceived,
 
-	/** Inivite to session was accepted in the overlay */
+	/** Invite to session was accepted in the overlay */
 	OverlayInviteToSessionAccepted,
+
+	/** Invite to session was rejected in the overlay */
+	OverlayInviteToSessionRejected,
+
+	/** Request to Join session pressed */
+	RequestToJoinFriendSession,
+
+	/** Request to Join session received */
+	RequestToJoinSessionReceived,
 
 	/** User wants to create new session */
 	NewSession,

@@ -39,7 +39,7 @@ public:
 	virtual ~FMain();
 
 	/**
-	 * Load EOS and Initalize the platform
+	 * Load EOS and Initialize the platform
 	 */
 	void InitPlatform();
 

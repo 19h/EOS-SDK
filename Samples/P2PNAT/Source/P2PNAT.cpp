@@ -132,7 +132,7 @@ void FP2PNAT::SendMessage(FProductUserId FriendId, const std::wstring& Message)
 
 	EOS_HP2P P2PHandle = EOS_Platform_GetP2PInterface(FPlatform::GetPlatformHandle());
 
-	EOS_P2P_SocketId SocketId;
+	EOS_P2P_SocketId SocketId = {};
 	SocketId.ApiVersion = EOS_P2P_SOCKETID_API_LATEST;
 	strncpy_s(SocketId.SocketName, "CHAT", 5);
 
@@ -177,7 +177,7 @@ void FP2PNAT::HandleReceivedMessages()
 	//Packet params
 	FProductUserId FriendId;
 
-	EOS_P2P_SocketId SocketId;
+	EOS_P2P_SocketId SocketId = {};
 	SocketId.ApiVersion = EOS_P2P_SOCKETID_API_LATEST;
 	uint8_t Channel = 0;
 
@@ -193,7 +193,7 @@ void FP2PNAT::HandleReceivedMessages()
 	}
 	else if (Result == EOS_EResult::EOS_Success)
 	{
-		auto P2PDialog = static_cast<FMenu&>(*FGame::Get().GetMenu()).GetP2PNATDialog();
+		std::shared_ptr<FP2PNATDialog> P2PDialog = static_cast<FMenu&>(*FGame::Get().GetMenu()).GetP2PNATDialog();
 		if (P2PDialog)
 		{
 			std::wstring MessageWide;
@@ -221,7 +221,7 @@ void FP2PNAT::SubscribeToConnectionRequests()
 	{
 		EOS_HP2P P2PHandle = EOS_Platform_GetP2PInterface(FPlatform::GetPlatformHandle());
 
-		EOS_P2P_SocketId SocketId;
+		EOS_P2P_SocketId SocketId = {};
 		SocketId.ApiVersion = EOS_P2P_SOCKETID_API_LATEST;
 		strncpy_s(SocketId.SocketName, "CHAT", 5);
 
@@ -258,7 +258,7 @@ void FP2PNAT::SubscribeToConnectionEstablished()
 	{
 		EOS_HP2P P2PHandle = EOS_Platform_GetP2PInterface(FPlatform::GetPlatformHandle());
 
-		EOS_P2P_SocketId SocketId;
+		EOS_P2P_SocketId SocketId = {};
 		SocketId.ApiVersion = EOS_P2P_SOCKETID_API_LATEST;
 		strncpy_s(SocketId.SocketName, "CHAT", 5);
 
@@ -306,7 +306,7 @@ void EOS_CALL FP2PNAT::OnIncomingConnectionRequest(const EOS_P2P_OnIncomingConne
 		Options.LocalUserId = Player->GetProductUserID();
 		Options.RemoteUserId = Data->RemoteUserId;
 
-		EOS_P2P_SocketId SocketId;
+		EOS_P2P_SocketId SocketId = {};
 		SocketId.ApiVersion = EOS_P2P_SOCKETID_API_LATEST;
 		strncpy_s(SocketId.SocketName, "CHAT", 5);
 		Options.SocketId = &SocketId;

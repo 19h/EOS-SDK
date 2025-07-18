@@ -45,4 +45,14 @@ public:
 	* @return String converted to narrow string
 	*/
 	static std::string Narrow(const std::wstring& Str);
+
+	/*
+	* Return a list of the words in the string, using sep as the delimiter string
+	* 
+	* @param Str - Source string
+	* @param Delimiter - Delimiter char
+	* 
+	* @return vertor of words
+	*/
+	static std::vector<std::wstring> Split(const std::wstring& Str, const wchar_t Delimiter);
 };

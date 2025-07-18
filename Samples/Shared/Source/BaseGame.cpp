@@ -29,8 +29,8 @@
 #endif
 
 /**
-* Singleton Implementation
-*/
+ * Singleton Implementation
+ */
 class FBaseGame::Impl
 {
 public:
@@ -54,7 +54,7 @@ public:
 
 	void Init()
 	{
-		HelpMessage  =
+		HelpMessage =
 		{
 			L"Console commands available:",
 			L" TEST - to print test message;",
@@ -690,6 +690,11 @@ std::shared_ptr<FBaseMenu> const& FBaseGame::GetMenu()
 const std::unique_ptr<FTextureManager>& FBaseGame::GetTextureManager()
 {
 	return TextureManager;
+}
+
+std::shared_ptr<FAuthentication> const& FBaseGame::GetAuthentication()
+{
+	return Authentication;
 }
 
 std::unique_ptr<FFriends> const& FBaseGame::GetFriends()

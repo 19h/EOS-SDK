@@ -142,7 +142,7 @@ void FMenu::UpdateLayout(int Width, int Height)
 
 	if (PopupDialog)
 	{
-		PopupDialog->SetPosition(Vector2((WindowSize.x / 2.f) - PopupDialog->GetSize().x / 2.0f, (WindowSize.y / 2.f) - PopupDialog->GetSize().y));
+		PopupDialog->SetPosition(Vector2((WindowSize.x / 2.f) - PopupDialog->GetSize().x / 2.0f, (WindowSize.y / 2.f) - PopupDialog->GetSize().y + 130.0f));
 	}
 
 	if (ExitDialog)

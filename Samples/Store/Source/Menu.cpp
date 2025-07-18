@@ -14,10 +14,16 @@
 #include "PopupDialog.h"
 #include "GUI/Sprite.h"
 
+namespace
+{
+	const Vector2 ConsoleDialogScale = Vector2(0.68f, 0.35f);
+	constexpr float UpperDialogVerticalOffset = 100.f;
+	constexpr float Padding = 10.f;
+}
+
 FMenu::FMenu(std::weak_ptr<FConsole> InConsole) noexcept(false):
 	FBaseMenu(InConsole)
 {
-
 }
 
 void FMenu::Create()
@@ -48,21 +54,24 @@ void FMenu::UpdateLayout(int Width, int Height)
 
 	if (ConsoleDialog)
 	{
-		Vector2 ConsoleWidgetSize = Vector2(WindowSize.x * 0.7f, WindowSize.y * 0.75f);
-		ConsoleDialog->SetSize(ConsoleWidgetSize);
+		Vector2 ConsoleDialogSize = Vector2(WindowSize.x * ConsoleDialogScale.x, WindowSize.y * ConsoleDialogScale.y);
+		ConsoleDialog->SetSize(ConsoleDialogSize);
 
-		Vector2 ConsoleWidgetPos = Vector2(10.f, WindowSize.y - ConsoleWidgetSize.y - 10.f);
-		ConsoleDialog->SetPosition(ConsoleWidgetPos);
+		Vector2 ConsoleDialogPos = Vector2(Padding, WindowSize.y - ConsoleDialogSize.y - Padding);
+		ConsoleDialog->SetPosition(ConsoleDialogPos);
 
 		if (StoreDialog)
 		{
-			Vector2 StoreDialogSize = Vector2(WindowSize.x - ConsoleDialog->GetSize().x - 30.f,
-				ConsoleDialog->GetSize().y);
+			float ConsoleDialogRight = ConsoleDialogPos.x + ConsoleDialogSize.x;
+			float ConsoleDialogBottom = ConsoleDialogPos.y + ConsoleDialogSize.y;
+
+			StoreDialog->SetConsoleDialogSizeAndPosition(ConsoleDialogSize, ConsoleDialogPos);
+
+			Vector2 StoreDialogSize = Vector2(WindowSize.x - ConsoleDialog->GetSize().x - 3 * Padding,	ConsoleDialogBottom - UpperDialogVerticalOffset);
 			StoreDialog->SetSize(StoreDialogSize);
 
-			Vector2 StoreialogPos = Vector2(ConsoleDialog->GetPosition().x + ConsoleDialog->GetSize().x + 10.f,
-				ConsoleDialog->GetPosition().y);
-			StoreDialog->SetPosition(StoreialogPos);
+			Vector2 StoreDialogPos = Vector2(ConsoleDialogRight + Padding, UpperDialogVerticalOffset);
+			StoreDialog->SetPosition(StoreDialogPos);
 		}
 	}
 

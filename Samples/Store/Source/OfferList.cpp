@@ -33,8 +33,11 @@ FOfferListWidget::FOfferListWidget(Vector2 OfferListPos,
 									 FontPtr OfferListNormalFont,
 									 FontPtr OfferListTitleFont,
 									 FontPtr OfferListSmallFont,
-									 FontPtr OfferListTinyFont) :
+									 FontPtr OfferListTinyFont,
+									 const std::wstring& Title,
+									 const FOfferInfoButtonParams& InOfferInfoButtonParams) :
 	IWidget(OfferListPos, OfferLisSize, OfferListLayer),
+	OfferInfoButtonParams(InOfferInfoButtonParams),
 	NormalFont(OfferListNormalFont),
 	TitleFont(OfferListTitleFont),
 	SmallFont(OfferListSmallFont),
@@ -46,7 +49,7 @@ FOfferListWidget::FOfferListWidget(Vector2 OfferListPos,
 		Vector2(Position.x, Position.y),
 		Vector2(OfferLisSize.x, 30.f),
 		OfferListLayer - 1,
-		L"Catalog",
+		Title,
 		L"Assets/dialog_title.dds",
 		FColor(1.f, 1.f, 1.f, 1.f),
 		FColor(1.f, 1.f, 1.f, 1.f),
@@ -56,6 +59,11 @@ FOfferListWidget::FOfferListWidget(Vector2 OfferListPos,
 
 void FOfferListWidget::Create()
 {
+	if (OfferInfoButtonParams.ButtonName.empty() || !OfferInfoButtonParams.OnButtonClicked)
+	{
+		return;
+	}
+
 	BackgroundImage->Create();
 
 	// Title
@@ -141,16 +149,25 @@ void FOfferListWidget::Release()
 	SmallFont.reset();
 	TinyFont.reset();
 
-	TitleLabel->Release();
-	TitleLabel.reset();
+	if (TitleLabel)
+	{
+		TitleLabel->Release();
+		TitleLabel.reset();
+	}
 
-	Scroller->Release();
-	Scroller.reset();
+	if (Scroller)
+	{
+		Scroller->Release();
+		Scroller.reset();
+	}
 
 	for (auto& OfferInfo : OfferWidgets)
 	{
-		OfferInfo->Release();
-		OfferInfo.reset();
+		if (OfferInfo)
+		{
+			OfferInfo->Release();
+			OfferInfo.reset();
+		}
 	}
 
 	if (SearchOfferWidget)
@@ -185,13 +202,6 @@ void FOfferListWidget::Update()
 		}
 
 		if (BackgroundImage) BackgroundImage->Update();
-
-		// Do we need to refresh data?
-		if (FGame::Get().GetStore()->IsDirty())
-		{
-			const std::vector<FOfferData>& Offers = FGame::Get().GetStore()->GetCatalog();
-			RefreshOfferData(Offers);
-		}
 
 		FilteredData = OfferData;
 		if (SearchOfferWidget && SearchButtonWidget && CancelSearchButtonWidget)
@@ -548,11 +558,6 @@ void FOfferListWidget::RefreshOfferData(const std::vector<FOfferData>& Offers)
 			NextWidget->SetOfferData(FOfferData());
 		}
 	}
-
-	if (FGame::Get().GetStore())
-	{
-		FGame::Get().GetStore()->SetDirty(false);
-	}
 }
 
 void FOfferListWidget::Clear()
@@ -590,7 +595,8 @@ void FOfferListWidget::CreateOffers()
 			Layer - 1,
 			FOfferData(),
 			SmallFont,
-			TinyFont);
+			TinyFont,
+			OfferInfoButtonParams);
 
 		if (OfferWidgets[i])
 		{

@@ -49,6 +49,8 @@ protected:
 	void OnModifyLobbyPressed();
 	void FinishLobbyModification();
 
+	std::vector<std::wstring> GetUsersOptionsList(int MinUsers, int MaxUsers);
+
 private:
 	/** Background */
 	WidgetPtr Background;

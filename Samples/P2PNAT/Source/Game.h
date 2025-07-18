@@ -52,6 +52,6 @@ protected:
 	std::unique_ptr<FP2PNAT> P2PNATComponent;
 
 	/** Timestamp to know when shutdown was triggered */
-	double ShutdownTriggeredTimestamp;
+	double ShutdownTriggeredTimestamp = 0.0;
 };
 

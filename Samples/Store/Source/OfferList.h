@@ -6,18 +6,19 @@
 #include "Scroller.h"
 #include "Font.h"
 #include "Store.h"
+#include "OfferInfo.h"
+
 
 /** Forward declarations */
 class FTextFieldWidget;
 class FTextViewWidget;
-class FOfferInfoWidget;
 class FTextLabelWidget;
 class FUIEvent;
 class FScroller;
 
 /**
- * Offer List
- */
+* A reusable widget used to display a list of offers in both the Catalog and the Cart.
+*/
 class FOfferListWidget : public IWidget, public IScrollable
 {
 public:
@@ -30,7 +31,9 @@ public:
 		FontPtr OfferListNormalFont,
 		FontPtr OfferListTitleFont,
 		FontPtr OfferListSmallFont,
-		FontPtr OfferListTinyFont);
+		FontPtr OfferListTinyFont,
+		const std::wstring& Title,
+		const FOfferInfoButtonParams& OfferInfoButtonParams);
 
 	FOfferListWidget(const FOfferListWidget&) = delete;
 	FOfferListWidget& operator=(const FOfferListWidget&) = delete;
@@ -137,6 +140,9 @@ private:
 
 	/** Cancel search button */
 	std::shared_ptr<FButtonWidget> CancelSearchButtonWidget;
+
+	/** Offer Info button name used when creating new offer info widgets. */
+	FOfferInfoButtonParams OfferInfoButtonParams;
 
 	/** Shared font */
 	FontPtr NormalFont;

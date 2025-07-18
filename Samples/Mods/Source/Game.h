@@ -62,6 +62,6 @@ protected:
 	std::unique_ptr<FMods> Mods;
 
 	/** Timestamp to know when shutdown was triggered */
-	double ShutdownTriggeredTimestamp;
+	double ShutdownTriggeredTimestamp = 0.0;
 };
 

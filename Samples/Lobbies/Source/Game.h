@@ -73,6 +73,6 @@ protected:
 	std::unique_ptr<FLobbies> Lobbies;
 
 	/** Timestamp to know when shutdown was triggered */
-	double ShutdownTriggeredTimestamp;
+	double ShutdownTriggeredTimestamp = 0.0;
 };
 

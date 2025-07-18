@@ -41,11 +41,17 @@ void FStore::Update()
 	}
 }
 
-void FStore::Checkout(const std::string& OfferId)
+void FStore::Checkout()
 {
 	if (!FPlatform::IsInitialized())
 	{
 		FDebugLog::LogWarning(L"[EOS SDK] Can't Checkout - Platform Not Initialized");
+		return;
+	}
+
+	if (GetCart().empty())
+	{
+		FDebugLog::LogWarning(L"Cart Empty!");
 		return;
 	}
 
@@ -55,18 +61,44 @@ void FStore::Checkout(const std::string& OfferId)
 
 	EOS_HEcom EcomHandle = EOS_Platform_GetEcomInterface(FPlatform::GetPlatformHandle());
 
-	EOS_Ecom_CheckoutEntry Entry;
-	Entry.ApiVersion = EOS_ECOM_CHECKOUTENTRY_API_LATEST;
-	Entry.OfferId = OfferId.c_str();
+	std::vector<EOS_Ecom_CheckoutEntry> CheckoutEntries;
+	for (const auto& CartItem : GetCart())
+	{
+		EOS_Ecom_CheckoutEntry Entry;
+		Entry.ApiVersion = EOS_ECOM_CHECKOUTENTRY_API_LATEST;
+		Entry.OfferId = CartItem.Id.c_str();
+		CheckoutEntries.push_back(Entry);
+	}
 
 	EOS_Ecom_CheckoutOptions CheckoutOptions{ 0 };
 	CheckoutOptions.ApiVersion = EOS_ECOM_CHECKOUT_API_LATEST;
 	CheckoutOptions.LocalUserId = CurrentUserId;
 	CheckoutOptions.OverrideCatalogNamespace = nullptr;
-	CheckoutOptions.EntryCount = 1;
-	CheckoutOptions.Entries = &Entry;
+	CheckoutOptions.EntryCount = static_cast<uint32_t>(CheckoutEntries.size());
+	CheckoutOptions.Entries = &CheckoutEntries[0];
 
 	EOS_Ecom_Checkout(EcomHandle, &CheckoutOptions, NULL, CheckoutCompleteCallbackFn);
+}
+
+void FStore::AddToCart(const FOfferData& OfferData)
+{
+	if (UserCart.Add(OfferData))
+	{
+		SetCartDirty(true);
+	}
+}
+
+void FStore::RemoveFromCart(const FOfferData& OfferData)
+{
+	if (UserCart.Remove(OfferData))
+	{
+		SetCartDirty(true);
+	}
+}
+
+const std::list<FOfferData>& FStore::GetCart() const
+{
+	return UserCart.CartItems;
 }
 
 void FStore::QueryStore(EOS_EpicAccountId LocalUserId)
@@ -137,6 +169,7 @@ void FStore::OnLoggedOut(FEpicAccountId UserId)
 {
 	Catalog.clear();
 	Entitlements.clear();
+	UserCart.Clear();
 	UpdateStoreTimer = 0.f;
 
 	if (FPlayerManager::Get().GetNumPlayers() > 0)
@@ -152,7 +185,6 @@ void FStore::OnLoggedOut(FEpicAccountId UserId)
 		SetCurrentUser(FEpicAccountId());
 	}
 }
-
 
 void FStore::OnGameEvent(const FGameEvent& Event)
 {
@@ -176,6 +208,9 @@ void FStore::OnGameEvent(const FGameEvent& Event)
 				SetCurrentUser(PrevPlayerId);
 				SetDirty(true);
 				QueryStore(PrevPlayerId);
+
+				UserCart.Clear();
+				SetCartDirty(true);
 			}
 			else
 			{
@@ -193,6 +228,9 @@ void FStore::OnGameEvent(const FGameEvent& Event)
 				SetCurrentUser(NextPlayerId);
 				SetDirty(true);
 				QueryStore(NextPlayerId);
+
+				UserCart.Clear();
+				SetCartDirty(true);
 			}
 			else
 			{
@@ -212,8 +250,16 @@ void FStore::OnGameEvent(const FGameEvent& Event)
 	else if (Event.GetType() == EGameEventType::CancelLogin)
 	{
 		SetDirty(true);
+		SetCartDirty(true);
 	}
 }
+
+void FStore::OnCheckoutSuccessful()
+{
+	UserCart.Clear();
+	SetCartDirty(true);
+}
+
 void EOS_CALL FStore::QueryStoreCompleteCallbackFn(const EOS_Ecom_QueryOffersCallbackInfo* OfferData)
 {
 	assert(OfferData != NULL);
@@ -433,4 +479,5 @@ void EOS_CALL FStore::CheckoutCompleteCallbackFn(const EOS_Ecom_CheckoutCallback
 	std::wstring Msg = L"Checkout Successful";
 	FGameEvent Event(EGameEventType::AddNotification, Msg);
 	FGame::Get().OnGameEvent(Event);
+	FGame::Get().GetStore()->OnCheckoutSuccessful();
 }

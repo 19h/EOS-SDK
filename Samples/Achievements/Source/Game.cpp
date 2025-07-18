@@ -150,9 +150,40 @@ void FGame::CreateConsoleCommands()
 						}
 					}
 				}
+				else if (args.size() == 3)
+				{
+					if (FGame::Get().GetAchievements())
+					{
+						std::string NarrowUserIdStr = FStringUtils::Narrow(args[2]);
+						EOS_ProductUserId TargetUserId = FAccountHelpers::ProductUserIDFromString(NarrowUserIdStr.c_str());
+						if (TargetUserId != nullptr)
+						{
+							try
+							{
+								FGame::Get().GetAchievements()->IngestStat(args[0], std::stoi(args[1]), TargetUserId);
+							}
+							catch (const std::invalid_argument&)
+							{
+								FGame::Get().GetConsole()->AddLine(L"Error: Can't ingest - invalid argument");
+							}
+							catch (const std::out_of_range&)
+							{
+								FGame::Get().GetConsole()->AddLine(L"Error: Can't ingest - out of range.");
+							}
+							catch (const std::exception&)
+							{
+								FGame::Get().GetConsole()->AddLine(L"Error: Can't ingest, undefined error.");
+							}
+						}
+						else
+						{
+							FGame::Get().GetConsole()->AddLine(L"INGEST called with an invalid user id");
+						}
+					}
+				}
 				else
 				{
-					FGame::Get().GetConsole()->AddLine(L"Error: name of stat and ingest amount is required.");
+					FGame::Get().GetConsole()->AddLine(L"Error: name of stat and ingest amount is required, target user id is optional");
 				}
 			}
 			else

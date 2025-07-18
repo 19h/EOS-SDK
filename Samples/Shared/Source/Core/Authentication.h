@@ -17,9 +17,6 @@ enum class ELoginMode
 	/** Login using an exchange code */
 	ExchangeCode,
 
-	/** Login using a device code */
-	DeviceCode,
-
 	/** Login using credentials from the EOS SDK Dev Auth Tool */
 	DevAuth,
 
@@ -107,6 +104,13 @@ public:
 	* @param Event - Game event to act on
 	*/
 	void OnGameEvent(const FGameEvent& Event);
+
+	/**
+	* Sets the default login scope to be used unless something else is passed through command line.
+	*
+	* @param LoginScope - The default login scope to use.
+	*/
+	void SetDefaultLoginScope(EOS_EAuthScopeFlags LoginScope);
 
 private:
 	/**
@@ -245,4 +249,7 @@ private:
 
 	/** Login mode used for current EOS_Auth_Login */
 	ELoginMode CurrentLoginMode;
+	
+	/** The default login scope that will be used unless something else is passed through the command line. */
+	EOS_EAuthScopeFlags DefaultLoginScope = EOS_EAuthScopeFlags::EOS_AS_BasicProfile | EOS_EAuthScopeFlags::EOS_AS_FriendsList | EOS_EAuthScopeFlags::EOS_AS_Presence;
 };

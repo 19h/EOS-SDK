@@ -191,6 +191,7 @@ set(SOURCES
 	
 	Source/Game.cpp
 	Source/Menu.cpp
+	Source/RequestToJoinSessionReceivedDialog.cpp
 	Source/SessionMatchmaking.cpp
 	Source/SessionMatchmakingDialog.cpp
 	Source/SessionInviteReceivedDialog.cpp

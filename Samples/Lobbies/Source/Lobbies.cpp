@@ -72,7 +72,7 @@ void FLobby::InitFromLobbyDetails(EOS_HLobbyDetails LobbyDetailsId)
 	}
 
 	//copy lobby info
-	EOS_LobbyDetails_CopyInfoOptions CopyInfoDetails;
+	EOS_LobbyDetails_CopyInfoOptions CopyInfoDetails = {};
 	CopyInfoDetails.ApiVersion = EOS_LOBBYDETAILS_COPYINFO_API_LATEST;
 	EOS_LobbyDetails_Info* LobbyInfo = nullptr;
 	EOS_EResult Result = EOS_LobbyDetails_CopyInfo(LobbyDetailsId, &CopyInfoDetails, &LobbyInfo);
@@ -89,6 +89,7 @@ void FLobby::InitFromLobbyDetails(EOS_HLobbyDetails LobbyDetailsId)
 	AvailableSlots = LobbyInfo->AvailableSlots;
 	BucketId.assign(LobbyInfo->BucketId);
 	bRTCRoomEnabled = LobbyInfo->bRTCRoomEnabled != EOS_FALSE;
+	bPresenceEnabled = LobbyInfo->bPresenceEnabled != EOS_FALSE;
 
 	EOS_LobbyDetails_Info_Release(LobbyInfo);
 
@@ -226,6 +227,7 @@ void FLobbies::OnShutdown()
 	LeaveLobby();
 	UnsubscribeFromLobbyInvites();
 	UnsubscribeFromLobbyUpdates();
+	UnsubscribeFromLeaveLobbyUI();
 }
 
 void FLobbies::Update()
@@ -517,7 +519,7 @@ bool FLobbies::CreateLobby(const FLobby& Lobby)
 		CreateOptions.bEnableRTCRoom = EOS_TRUE;
 
 		LocalRTCOptions.ApiVersion = EOS_LOBBY_LOCALRTCOPTIONS_API_LATEST;
-		LocalRTCOptions.Flags = 0;
+		LocalRTCOptions.Flags = EOS_RTC_JOINROOMFLAGS_ENABLE_DATACHANNEL; // Enable data channel so it can be used to notify about skin color changes
 		LocalRTCOptions.bUseManualAudioInput = EOS_FALSE;
 		LocalRTCOptions.bUseManualAudioOutput = EOS_FALSE;
 		LocalRTCOptions.bLocalAudioDeviceInputStartsMuted = EOS_FALSE;
@@ -768,7 +770,7 @@ void FLobbies::JoinLobby(EOS_LobbyId Id, LobbyDetailsKeeper LobbyInfo, bool bPre
 		return;
 	}
 
-	if (CurrentLobby.IsValid())
+	if (CurrentLobby.IsValid() && CurrentLobby.GetMemberByProductUserId(CurrentUserProductId) != nullptr)
 	{
 		if (CurrentLobby.Id == Id)
 		{
@@ -794,6 +796,15 @@ void FLobbies::JoinLobby(EOS_LobbyId Id, LobbyDetailsKeeper LobbyInfo, bool bPre
 		JoinOptions.LobbyDetailsHandle = LobbyInfo.get();
 		JoinOptions.LocalUserId = CurrentUserProductId;
 		JoinOptions.bPresenceEnabled = bPresenceEnabled;
+
+		EOS_Lobby_LocalRTCOptions LocalRTCOptions = {};
+		LocalRTCOptions.ApiVersion = EOS_LOBBY_LOCALRTCOPTIONS_API_LATEST;
+		LocalRTCOptions.Flags = EOS_RTC_JOINROOMFLAGS_ENABLE_DATACHANNEL; // Enable data channel so it can be used to notify about skin color changes
+		LocalRTCOptions.bUseManualAudioInput = EOS_FALSE;
+		LocalRTCOptions.bUseManualAudioOutput = EOS_FALSE;
+		LocalRTCOptions.bLocalAudioDeviceInputStartsMuted = EOS_FALSE;
+
+		JoinOptions.LocalRTCOptions = &LocalRTCOptions;
 
 		EOS_Lobby_JoinLobby(LobbyHandle, &JoinOptions, nullptr, OnJoinLobbyFinished);
 	}
@@ -913,28 +924,23 @@ void FLobbies::ShuffleSkin()
 		return;
 	}
 
-	for (FLobbyMember& NextMember : CurrentLobby.Members)
+	if (FLobbyMember* LocalLobbyMember = CurrentLobby.GetMemberByProductUserId(CurrentUserProductId))
 	{
-		if (NextMember.ProductId == CurrentUserProductId)
+		if (LocalLobbyMember->MemberAttributes.empty())
 		{
-			if (NextMember.MemberAttributes.empty())
-			{
-				FLobbyAttribute SkinAttribute;
-				SkinAttribute.Key = "SKIN";
-				SkinAttribute.ValueType = FLobbyAttribute::String;
-				SkinAttribute.AsString = FLobbyMember::GetSkinString(NextMember.CurrentSkin);
-				NextMember.MemberAttributes.push_back(SkinAttribute);
-			}
-			else
-			{
-				NextMember.ShuffleSkin();
-				NextMember.MemberAttributes[0].AsString = FLobbyMember::GetSkinString(NextMember.CurrentSkin);
-			}
-
-			SetMemberAttribute(NextMember.MemberAttributes[0]);
-
-			return;
+			FLobbyAttribute SkinAttribute;
+			SkinAttribute.Key = "SKIN";
+			SkinAttribute.ValueType = FLobbyAttribute::String;
+			SkinAttribute.AsString = FLobbyMember::GetSkinString(LocalLobbyMember->CurrentSkin);
+			LocalLobbyMember->MemberAttributes.push_back(SkinAttribute);
 		}
+		else
+		{
+			LocalLobbyMember->ShuffleSkin();
+			LocalLobbyMember->MemberAttributes[0].AsString = FLobbyMember::GetSkinString(LocalLobbyMember->CurrentSkin);
+		}
+
+		SetMemberAttribute(LocalLobbyMember->MemberAttributes[0]);
 	}
 }
 
@@ -943,22 +949,17 @@ void FLobbies::MuteAudio(FProductUserId TargetUserId)
 	EOS_HRTC RTCHandle = EOS_Platform_GetRTCInterface(FPlatform::GetPlatformHandle());
 	EOS_HRTCAudio AudioHandle = EOS_RTC_GetAudioInterface(RTCHandle);
 
-	for (FLobbyMember& LobbyMember : CurrentLobby.Members)
+	// Find the correct lobby member
+	if (FLobbyMember* LobbyMember = CurrentLobby.GetMemberByProductUserId(TargetUserId))
 	{
-		// Find the correct lobby member
-		if (LobbyMember.ProductId != TargetUserId)
-		{
-			continue;
-		}
-
 		// Do not allow multiple local mutes/unmutes at the same time
-		if (LobbyMember.RTCState.bMuteActionInProgress)
+		if (LobbyMember->RTCState.bMuteActionInProgress)
 		{
 			return;
 		}
 
 		// Set their mute action as in progress so we don't try to toggle their mute status again until it completes
-		LobbyMember.RTCState.bMuteActionInProgress = true;
+		LobbyMember->RTCState.bMuteActionInProgress = true;
 
 		// Check if we're muting ourselves vs muting someone else
 		if (CurrentUserProductId == TargetUserId)
@@ -968,7 +969,7 @@ void FLobbies::MuteAudio(FProductUserId TargetUserId)
 			UpdateSendingOptions.ApiVersion = EOS_RTCAUDIO_UPDATESENDING_API_LATEST;
 			UpdateSendingOptions.LocalUserId = CurrentUserProductId;
 			UpdateSendingOptions.RoomName = CurrentLobby.RTCRoomName.c_str();
-			UpdateSendingOptions.AudioStatus = LobbyMember.RTCState.bIsAudioOutputDisabled ? EOS_ERTCAudioStatus::EOS_RTCAS_Enabled : EOS_ERTCAudioStatus::EOS_RTCAS_Disabled;
+			UpdateSendingOptions.AudioStatus = LobbyMember->RTCState.bIsAudioOutputDisabled ? EOS_ERTCAudioStatus::EOS_RTCAS_Enabled : EOS_ERTCAudioStatus::EOS_RTCAS_Disabled;
 
 			const wchar_t* AudioStatusText = UpdateSendingOptions.AudioStatus == EOS_ERTCAudioStatus::EOS_RTCAS_Enabled ? L"Unmuted" : L"Muted";
 			FDebugLog::LogError(L"Lobbies - MuteAudio: Setting audio output status to %ls", AudioStatusText);
@@ -983,7 +984,7 @@ void FLobbies::MuteAudio(FProductUserId TargetUserId)
 			UpdateReceivingOptions.LocalUserId = CurrentUserProductId;
 			UpdateReceivingOptions.RoomName = CurrentLobby.RTCRoomName.c_str();
 			UpdateReceivingOptions.ParticipantId = TargetUserId;
-			UpdateReceivingOptions.bAudioEnabled = LobbyMember.RTCState.bIsLocallyMuted ? EOS_TRUE : EOS_FALSE;
+			UpdateReceivingOptions.bAudioEnabled = LobbyMember->RTCState.bIsLocallyMuted ? EOS_TRUE : EOS_FALSE;
 
 			const wchar_t* AudioStatusText = UpdateReceivingOptions.bAudioEnabled ? L"Unmuting" : L"Muting";
 			FDebugLog::LogError(L"Lobbies - MuteAudio: %ls remote player. TargetParticipantId=[%ls]",
@@ -992,7 +993,6 @@ void FLobbies::MuteAudio(FProductUserId TargetUserId)
 
 			EOS_RTCAudio_UpdateReceiving(AudioHandle, &UpdateReceivingOptions, nullptr, OnRTCRoomUpdateReceivingComplete);
 		}
-		return;
 	}
 }
 
@@ -1010,25 +1010,21 @@ void FLobbies::ToggleHardMuteMember(FProductUserId TargetUserId)
 		return;
 	}
 
-	for (FLobbyMember& LobbyMember : CurrentLobby.Members)
+	// Find the correct lobby member
+	if (FLobbyMember* LobbyMember = CurrentLobby.GetMemberByProductUserId(TargetUserId))
 	{
-		// Find the correct lobby member
-		if (LobbyMember.ProductId == TargetUserId)
+		// Do not allow multiple local mutes/unmutes at the same time
+		if (LobbyMember->RTCState.bHardMuteActionInProgress)
 		{
-			// Do not allow multiple local mutes/unmutes at the same time
-			if (LobbyMember.RTCState.bHardMuteActionInProgress)
-			{
-				FDebugLog::LogWarning(L"Lobbies - ToggleHardMuteMember: Hard muting %ls remote player is already in progress!",
-					FStringUtils::Widen(FAccountHelpers::ProductUserIDToString(TargetUserId)).c_str());
-				break;
-			}
-
-			// Set their hard mute action as in progress so we don't try to toggle their hard mute status again until it completes
-			LobbyMember.RTCState.bHardMuteActionInProgress = true;
-
-			HardMuteMember(TargetUserId, !LobbyMember.RTCState.bIsHardMuted); // toggle hard mute state
-			break;
+			FDebugLog::LogWarning(L"Lobbies - ToggleHardMuteMember: Hard muting %ls remote player is already in progress!",
+				FStringUtils::Widen(FAccountHelpers::ProductUserIDToString(TargetUserId)).c_str());
+			return;
 		}
+
+		// Set their hard mute action as in progress so we don't try to toggle their hard mute status again until it completes
+		LobbyMember->RTCState.bHardMuteActionInProgress = true;
+
+		HardMuteMember(TargetUserId, !LobbyMember->RTCState.bIsHardMuted); // toggle hard mute state
 	}
 }
 
@@ -1120,20 +1116,16 @@ void FLobbies::SetInitialMemberAttribute()
 		return;
 	}
 
-	for (const FLobbyMember& NextMember : CurrentLobby.Members)
+	if (FLobbyMember* LocalLobbyMember = CurrentLobby.GetMemberByProductUserId(CurrentUserProductId))
 	{
-		if (NextMember.ProductId == CurrentUserProductId)
+		//Check if skin is already set
+		if (LocalLobbyMember->MemberAttributes.empty())
 		{
-			//Check if skin is already set
-			if (NextMember.MemberAttributes.empty())
-			{
-				FLobbyAttribute SkinAttribute;
-				SkinAttribute.Key = "SKIN";
-				SkinAttribute.ValueType = FLobbyAttribute::String;
-				SkinAttribute.AsString = FLobbyMember::GetSkinString(NextMember.CurrentSkin);
-				SetMemberAttribute(SkinAttribute);
-				return;
-			}
+			FLobbyAttribute SkinAttribute;
+			SkinAttribute.Key = "SKIN";
+			SkinAttribute.ValueType = FLobbyAttribute::String;
+			SkinAttribute.AsString = FLobbyMember::GetSkinString(LocalLobbyMember->CurrentSkin);
+			SetMemberAttribute(SkinAttribute);
 		}
 	}
 }
@@ -1261,6 +1253,36 @@ void FLobbies::Search(const std::string& LobbyId, uint32_t MaxNumResults)
 	EOS_LobbySearch_Find(LobbySearch, &FindOptions, nullptr, OnLobbySearchFinished);
 }
 
+void FLobbies::SearchLobbyByLevel(const std::string& LevelName)
+{
+	std::vector<FLobbyAttribute> Attributes;
+
+	FLobbyAttribute LevelAttribute;
+	LevelAttribute.Key = "LEVEL";
+	LevelAttribute.ValueType = FLobbyAttribute::String;
+	LevelAttribute.AsString = LevelName;
+	LevelAttribute.Visibility = EOS_ELobbyAttributeVisibility::EOS_LAT_PUBLIC;
+
+	Attributes.push_back(LevelAttribute);
+
+	Search(Attributes);
+}
+
+void FLobbies::SearchLobbyByBucketId(const std::string& BucketId)
+{
+	std::vector<FLobbyAttribute> Attributes;
+
+	FLobbyAttribute BucketIdAttribute;
+	BucketIdAttribute.Key = EOS_LOBBY_SEARCH_BUCKET_ID;
+	BucketIdAttribute.ValueType = FLobbyAttribute::String;
+	BucketIdAttribute.AsString = BucketId;
+	BucketIdAttribute.Visibility = EOS_ELobbyAttributeVisibility::EOS_LAT_PUBLIC;
+
+	Attributes.push_back(BucketIdAttribute);
+
+	Search(Attributes, 1);
+}
+
 void FLobbies::ClearSearch()
 {
 	CurrentSearch.Release();
@@ -1342,6 +1364,24 @@ void FLobbies::UnsubscribeFromLobbyInvites()
 
 		EOS_Lobby_RemoveNotifyJoinLobbyAccepted(LobbyHandle, JoinLobbyAcceptedNotification);
 		JoinLobbyAcceptedNotification = EOS_INVALID_NOTIFICATIONID;
+	}
+}
+
+void FLobbies::SubscribeToLeaveLobbyUI()
+{
+	EOS_HLobby LobbiesHandle = EOS_Platform_GetLobbyInterface(FPlatform::GetPlatformHandle());
+
+	EOS_Lobby_AddNotifyLeaveLobbyRequestedOptions LeaveLobbyRequestedOptions = { };
+	LeaveLobbyRequestedOptions.ApiVersion = EOS_LOBBY_ADDNOTIFYLEAVELOBBYREQUESTED_API_LATEST;
+	LeaveLobbyRequestedNotification = EOS_Lobby_AddNotifyLeaveLobbyRequested(LobbiesHandle, &LeaveLobbyRequestedOptions, nullptr, OnLeaveLobbyRequested);
+}
+
+void FLobbies::UnsubscribeFromLeaveLobbyUI()
+{
+	if (LeaveLobbyRequestedNotification != EOS_INVALID_NOTIFICATIONID)
+	{
+		EOS_Lobby_RemoveNotifyLeaveLobbyRequested(EOS_Platform_GetLobbyInterface(FPlatform::GetPlatformHandle()), LeaveLobbyRequestedNotification);
+		LeaveLobbyRequestedNotification = EOS_INVALID_NOTIFICATIONID;
 	}
 }
 
@@ -1716,23 +1756,18 @@ void FLobbies::OnHardMuteMemberFinished(EOS_LobbyId Id, FProductUserId Participa
 		return;
 	}
 
-	for (FLobbyMember& LobbyMember : CurrentLobby.Members)
+	if (FLobbyMember* LobbyMember = CurrentLobby.GetMemberByProductUserId(ParticipantId))
 	{
-		if (LobbyMember.ProductId == ParticipantId)
+		LobbyMember->RTCState.bHardMuteActionInProgress = false;
+			
+		if (Result == EOS_EResult::EOS_Success)
 		{
-			LobbyMember.RTCState.bHardMuteActionInProgress = false;
-			
-			if (Result == EOS_EResult::EOS_Success)
-			{
-				FDebugLog::Log(L"Lobbies (OnHardMuteMemberFinished): success.");
-				LobbyMember.RTCState.bIsHardMuted = !LobbyMember.RTCState.bIsHardMuted; // we only support toggle functionality in this sample so we know the new state
-			}
-			else
-			{
-				FDebugLog::LogError(L"Lobbies (OnHardMuteMemberFinished): error code: %ls", FStringUtils::Widen(EOS_EResult_ToString(Result)).c_str());
-			}
-			
-			break;
+			FDebugLog::Log(L"Lobbies (OnHardMuteMemberFinished): success.");
+			LobbyMember->RTCState.bIsHardMuted = !LobbyMember->RTCState.bIsHardMuted; // we only support toggle functionality in this sample so we know the new state
+		}
+		else
+		{
+			FDebugLog::LogError(L"Lobbies (OnHardMuteMemberFinished): error code: %ls", FStringUtils::Widen(EOS_EResult_ToString(Result)).c_str());
 		}
 	}
 }
@@ -1752,16 +1787,12 @@ void FLobbies::OnRTCRoomConnectionChanged(EOS_LobbyId Id, FProductUserId LocalUs
 
 	CurrentLobby.bRTCRoomConnected = bIsConnected;
 
-	for (FLobbyMember& LobbyMember : CurrentLobby.Members)
+	if (FLobbyMember* LobbyMember = CurrentLobby.GetMemberByProductUserId(LocalUserId))
 	{
-		if (LobbyMember.ProductId == LocalUserId)
+		LobbyMember->RTCState.bIsInRTCRoom = bIsConnected;
+		if (!bIsConnected)
 		{
-			LobbyMember.RTCState.bIsInRTCRoom = bIsConnected;
-			if (!bIsConnected)
-			{
-				LobbyMember.RTCState.bIsTalking = false;
-			}
-			break;
+			LobbyMember->RTCState.bIsTalking = false;
 		}
 	}
 
@@ -1777,18 +1808,12 @@ void FLobbies::OnRTCRoomParticipantJoined(const char* RoomName, FProductUserId P
 	}
 
 	// Find this participant in our list
-	for (FLobbyMember& LobbyMember : CurrentLobby.Members)
+	if (FLobbyMember* LobbyMember = CurrentLobby.GetMemberByProductUserId(ParticipantId))
 	{
-		if (LobbyMember.ProductId != ParticipantId)
-		{
-			continue;
-		}
-
 		// Update in-room status
-		LobbyMember.RTCState.bIsInRTCRoom = true;
+		LobbyMember->RTCState.bIsInRTCRoom = true;
 
 		bDirty = true;
-		return;
 	}
 }
 
@@ -1801,21 +1826,15 @@ void FLobbies::OnRTCRoomParticipantLeft(const char* RoomName, FProductUserId Par
 	}
 
 	// Find this participant in our list
-	for (FLobbyMember& LobbyMember : CurrentLobby.Members)
+	if (FLobbyMember* LobbyMember = CurrentLobby.GetMemberByProductUserId(ParticipantId))
 	{
-		if (LobbyMember.ProductId != ParticipantId)
-		{
-			continue;
-		}
-
 		// Update in-room status
-		LobbyMember.RTCState.bIsInRTCRoom = false;
+		LobbyMember->RTCState.bIsInRTCRoom = false;
 
 		// Additionally clear their talking status when they leave, just to be safe
-		LobbyMember.RTCState.bIsTalking = false;
+		LobbyMember->RTCState.bIsTalking = false;
 
 		bDirty = true;
-		return;
 	}
 }
 
@@ -1828,28 +1847,22 @@ void FLobbies::OnRTCRoomParticipantAudioUpdated(const char* RoomName, FProductUs
 	}
 
 	// Find this participant in our list
-	for (FLobbyMember& LobbyMember : CurrentLobby.Members)
+	if (FLobbyMember* LobbyMember = CurrentLobby.GetMemberByProductUserId(ParticipantId))
 	{
-		if (LobbyMember.ProductId != ParticipantId)
-		{
-			continue;
-		}
-
 		// Update talking status
-		LobbyMember.RTCState.bIsTalking = bIsTalking;
+		LobbyMember->RTCState.bIsTalking = bIsTalking;
 
 		// Update the audio output status for other players
-		if (LobbyMember.ProductId != CurrentUserProductId)
+		if (LobbyMember->ProductId != CurrentUserProductId)
 		{
-			LobbyMember.RTCState.bIsAudioOutputDisabled = bIsAudioDisabled;
+			LobbyMember->RTCState.bIsAudioOutputDisabled = bIsAudioDisabled;
 		}
 		else // I could have been hard-muted by the lobby owner
 		{
-			LobbyMember.RTCState.bIsHardMuted = bIsHardMuted;
+			LobbyMember->RTCState.bIsHardMuted = bIsHardMuted;
 		}
 
 		bDirty = true;
-		return;
 	}
 }
 
@@ -1868,18 +1881,11 @@ void FLobbies::OnRTCRoomUpdateSendingComplete(const char* RoomName, FProductUser
 	}
 
 	// Update our mute status
-	for (FLobbyMember& LobbyMember : CurrentLobby.Members)
+	if (FLobbyMember* LobbyMember = CurrentLobby.GetMemberByProductUserId(ParticipantId))
 	{
-		// Find ourselves in the list
-		if (LobbyMember.ProductId != ParticipantId)
-		{
-			continue;
-		}
-
-		LobbyMember.RTCState.bIsAudioOutputDisabled = NewAudioStatus == EOS_ERTCAudioStatus::EOS_RTCAS_Disabled;
-		LobbyMember.RTCState.bMuteActionInProgress = false;
+		LobbyMember->RTCState.bIsAudioOutputDisabled = NewAudioStatus == EOS_ERTCAudioStatus::EOS_RTCAS_Disabled;
+		LobbyMember->RTCState.bMuteActionInProgress = false;
 		bDirty = true;
-		return;
 	}
 }
 
@@ -1891,23 +1897,11 @@ void FLobbies::OnRTCRoomUpdateReceivingComplete(const char* RoomName, FProductUs
 		return;
 	}
 
-	// Ensure this update is for us
-	if (CurrentUserProductId != ParticipantId)
+	if (FLobbyMember* LobbyMember = CurrentLobby.GetMemberByProductUserId(ParticipantId))
 	{
-		return;
-	}
-
-	for (FLobbyMember& LobbyMember : CurrentLobby.Members)
-	{
-		if (LobbyMember.ProductId == ParticipantId)
-		{
-			continue;
-		}
-
-		LobbyMember.RTCState.bIsLocallyMuted = bIsMuted;
-		LobbyMember.RTCState.bMuteActionInProgress = false;
+		LobbyMember->RTCState.bIsLocallyMuted = bIsMuted;
+		LobbyMember->RTCState.bMuteActionInProgress = false;
 		bDirty = true;
-		return;
 	}
 }
 
@@ -2413,17 +2407,39 @@ void EOS_CALL FLobbies::OnRTCRoomUpdateReceivingComplete(const EOS_RTCAudio_Upda
 			}
 			else
 			{
-				FDebugLog::Log(L"Lobbies (OnRTCRoomUpdateReceivingComplete): Updated receiving status successfully. LocalUserId=[%ls] Room=[%ls] bIsMuted=[%d]",
-					FStringUtils::Widen(FAccountHelpers::ProductUserIDToString(Data->LocalUserId)).c_str(),
+				FDebugLog::Log(L"Lobbies (OnRTCRoomUpdateReceivingComplete): Updated receiving status successfully. ParticipantId=[%ls] Room=[%ls] bIsMuted=[%d]",
+					FStringUtils::Widen(FAccountHelpers::ProductUserIDToString(Data->ParticipantId)).c_str(),
 					FStringUtils::Widen(Data->RoomName).c_str(),
 					bIsMuted);
 			}
-			FGame::Get().GetLobbies()->OnRTCRoomUpdateReceivingComplete(Data->RoomName, Data->LocalUserId, bIsMuted);
+			FGame::Get().GetLobbies()->OnRTCRoomUpdateReceivingComplete(Data->RoomName, Data->ParticipantId, bIsMuted);
 		}
 	}
 	else
 	{
 		FDebugLog::LogError(L"Lobbies (OnRTCRoomUpdateReceivingComplete): EOS_RTCAudio_UpdateReceivingCallbackInfo is null");
+	}
+}
+
+void EOS_CALL FLobbies::OnLeaveLobbyRequested(const EOS_Lobby_LeaveLobbyRequestedCallbackInfo* Data)
+{
+	if (Data)
+	{
+		const std::string LeaveLobbyId = std::string(Data->LobbyId);
+		const std::string CurrentLobbyId = FGame::Get().GetLobbies()->GetCurrentLobby().Id;
+		if (LeaveLobbyId == CurrentLobbyId)
+		{
+			FDebugLog::Log(L"Lobbies: Leave lobby requested for LobbyId = %ls", FStringUtils::Widen(LeaveLobbyId).c_str());
+			FGame::Get().GetLobbies()->LeaveLobby();
+		}
+		else
+		{
+			FDebugLog::LogError(L"Lobbies (OnLeaveLobbyRequested): Leave lobby requested on non active lobby. LeaveLobbyId = %ls, CurrentLobbyId = %ls", FStringUtils::Widen(LeaveLobbyId).c_str(), FStringUtils::Widen(CurrentLobbyId).c_str());
+		}
+	}
+	else
+	{
+		FDebugLog::LogError(L"Lobbies (OnLeaveLobbyRequested): EOS_Lobby_LeaveLobbyRequestedCallbackInfo is null");
 	}
 }
 

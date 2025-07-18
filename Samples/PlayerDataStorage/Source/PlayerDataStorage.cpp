@@ -3,6 +3,7 @@
 #include "pch.h"
 #include "DebugLog.h"
 #include "StringUtils.h"
+#include "Utils.h"
 #include "AccountHelpers.h"
 #include "Game.h"
 #include "GameEvent.h"
@@ -563,7 +564,7 @@ void EOS_CALL FPlayerDataStorage::OnFileListRetrieved(const EOS_PlayerDataStorag
 			EOS_HPlayerDataStorage PlayerStorageHandle = EOS_Platform_GetPlayerDataStorageInterface(FPlatform::GetPlatformHandle());
 			for (size_t FileIndex = 0; FileIndex < FileCount; ++FileIndex)
 			{
-				EOS_PlayerDataStorage_CopyFileMetadataAtIndexOptions Options;
+				EOS_PlayerDataStorage_CopyFileMetadataAtIndexOptions Options = {};
 				Options.ApiVersion = EOS_PLAYERDATASTORAGE_COPYFILEMETADATAATINDEX_API_LATEST;
 
 				Options.LocalUserId = Player->GetProductUserID();
@@ -580,6 +581,20 @@ void EOS_CALL FPlayerDataStorage::OnFileListRetrieved(const EOS_PlayerDataStorag
 						std::wstring FileName = FStringUtils::Widen(FileMetadata->Filename);
 
 						FileNames.push_back(FileName);
+
+						if (FileMetadata->MD5Hash)
+						{
+							std::wstring MD5Hash = FStringUtils::Widen(FileMetadata->MD5Hash);
+
+							std::wstring LastModifiedTimeStrW = L"Undefined";
+							if (FileMetadata->LastModifiedTime != EOS_PLAYERDATASTORAGE_TIME_UNDEFINED)
+							{
+								LastModifiedTimeStrW = FUtils::ConvertUnixTimestampToUTCString(FileMetadata->LastModifiedTime);
+							}
+
+							FDebugLog::Log(L"[EOS SDK] File List Retrieved - Filename: %ls, FileSizeBytes: %u, UnencryptedDataSizeBytes: %u, MD5Hash: %ls, LastModifiedTime: %ls",
+								FileName.c_str(), FileMetadata->FileSizeBytes, FileMetadata->UnencryptedDataSizeBytes, MD5Hash.c_str(), LastModifiedTimeStrW.c_str());
+						}
 					}
 
 					EOS_PlayerDataStorage_FileMetadata_Release(FileMetadata);
@@ -637,13 +652,46 @@ void EOS_CALL FPlayerDataStorage::OnFileSent(const EOS_PlayerDataStorage_WriteFi
 	{
 		if (Data->ResultCode == EOS_EResult::EOS_Success)
 		{
-			FGame::Get().GetPlayerDataStorage()->FinishFileUpload(FStringUtils::Widen(Data->Filename));
+			PlayerPtr Player = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser());
+			if (Player == nullptr || !Player->GetProductUserID().IsValid())
+			{
+				return;
+			}
+
+			EOS_HPlayerDataStorage PlayerStorageHandle = EOS_Platform_GetPlayerDataStorageInterface(FPlatform::GetPlatformHandle());
+			EOS_PlayerDataStorage_CopyFileMetadataByFilenameOptions Options = {};
+			Options.ApiVersion = EOS_PLAYERDATASTORAGE_COPYFILEMETADATABYFILENAMEOPTIONS_API_LATEST;
+			Options.LocalUserId = Player->GetProductUserID();
+			Options.Filename = Data->Filename;
+
+			EOS_PlayerDataStorage_FileMetadata* FileMetadata = nullptr;
+			EOS_PlayerDataStorage_CopyFileMetadataByFilename(PlayerStorageHandle, &Options, &FileMetadata);
+
+			if (FileMetadata)
+			{
+				if (FileMetadata->Filename && FileMetadata->MD5Hash)
+				{
+					std::wstring FileName = FStringUtils::Widen(FileMetadata->Filename);
+					std::wstring MD5Hash = FStringUtils::Widen(FileMetadata->MD5Hash);
+
+					std::wstring LastModifiedTimeStrW = L"Undefined";
+					if (FileMetadata->LastModifiedTime != EOS_PLAYERDATASTORAGE_TIME_UNDEFINED)
+					{
+						LastModifiedTimeStrW = FUtils::ConvertUnixTimestampToUTCString(FileMetadata->LastModifiedTime);
+					}
+
+					FDebugLog::Log(L"[EOS SDK] File Sent - Filename: %ls, FileSizeBytes: %u, UnencryptedDataSizeBytes: %u, MD5Hash: %ls, LastModifiedTime: %ls",
+						FileName.c_str(), FileMetadata->FileSizeBytes, FileMetadata->UnencryptedDataSizeBytes, MD5Hash.c_str(), LastModifiedTimeStrW.c_str());
+				}
+
+				EOS_PlayerDataStorage_FileMetadata_Release(FileMetadata);
+			}
 		}
 		else
 		{
 			FDebugLog::LogError(L"[EOS SDK] Player data storage: could not upload file: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
-			FGame::Get().GetPlayerDataStorage()->FinishFileUpload(FStringUtils::Widen(Data->Filename));
 		}
+		FGame::Get().GetPlayerDataStorage()->FinishFileUpload(FStringUtils::Widen(Data->Filename));
 	}
 }
 

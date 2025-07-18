@@ -37,7 +37,7 @@ include_directories ("${EOS_SDK_INCLUDE_DIR}")
 
 if(DEV)
 	include_directories("${PROJECT_SOURCE_DIR}/../../Shared/NotForLicensees/Source/Core")
-	add_definitions(-DALLOW_RESERVED_PLATFORM_OPTIONS)
+	add_definitions(-DALLOW_RESERVED_OPTIONS)
 endif(DEV)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})

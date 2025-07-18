@@ -63,10 +63,12 @@ public:
 	const std::unique_ptr<FSessionMatchmaking>& GetSessions();
 
 protected:
+	virtual void CreateConsoleCommands() override;
+
 	/** Leaderboard component */
 	std::unique_ptr<FSessionMatchmaking> SessionMatchmaking;
 
 	/** Timestamp to know when shutdown was triggered */
-	double ShutdownTriggeredTimestamp;
+	double ShutdownTriggeredTimestamp = 0.0;
 };
 

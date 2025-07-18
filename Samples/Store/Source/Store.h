@@ -47,8 +47,14 @@ public:
 	/** Query the store for offer info and entitlement info */
 	void Update();
 
-	/** Buy an offer */
-	void Checkout(const std::string& OfferId);
+	/** Buy current offers in the cart. */
+	void Checkout();
+
+	/** Adds an offer to the cart. */
+	void AddToCart(const FOfferData& OfferData);
+
+	/** Removes an offer from the cart. */
+	void RemoveFromCart(const FOfferData& OfferData);
 
 	/** Redeem an entitlement */
 	// void RedeemEntitlement(const FEntitlementData& Entitlement);
@@ -57,11 +63,18 @@ public:
 	const std::vector<FOfferData>& GetCatalog() const { return Catalog; }
 	/** Retrieves the entitlements cache */
 	const std::vector<FEntitlementData>& GetEntitlements() const { return Entitlements; }
+	/** Retrieves the cart cache for the current user. */
+	const std::list<FOfferData>& GetCart() const;
 
 	/** Has the catalog data updated? */
 	bool IsDirty() { return bDirty; };
 	/** Change the dirty flag directly */
 	void SetDirty(bool bNewIsDirty) { bDirty = bNewIsDirty; };
+
+	/** Has the cart data updated? */
+	bool IsCartDirty() { return bIsCartDirty; }
+	/** Change the cart dirty flag directly */
+	void SetCartDirty(bool bNewIsCartDirty) { bIsCartDirty = bNewIsCartDirty; }
 
 	/** Set the user currently associated with the store */
 	void SetCurrentUser(FEpicAccountId UserId) { CurrentUserId = UserId; };
@@ -71,7 +84,63 @@ public:
 	/** Notify the store of game events. */
 	void OnGameEvent(const FGameEvent& Event);
 
+	/** Called on the completion of a successful checkout. */
+	void OnCheckoutSuccessful();
 private:
+	struct FCart
+	{
+		/** Cart related Aliases. */
+		using CartItemIter = std::list<FOfferData>::iterator;
+		using CartItemToIterMap = std::map<std::string, CartItemIter>;
+
+		/** The current cart cache */
+		std::list<FOfferData> CartItems;
+		/** A map that helps in O(1) removal of items from the cart */
+		CartItemToIterMap CartItemMap;
+
+		FCart() = default;
+		~FCart()
+		{
+			CartItems.clear();
+			CartItemMap.clear();
+		}
+
+		bool Add(const FOfferData& OfferData)
+		{
+			CartItemToIterMap::iterator It = CartItemMap.find(OfferData.Id);
+			// Do not allow duplicates.
+			if (It == CartItemMap.end())
+			{
+				CartItemIter ItemIter = CartItems.insert(CartItems.end(), OfferData);
+				CartItemMap.insert({ OfferData.Id, ItemIter });
+
+				return true;
+			}
+
+			return false;
+		}
+
+		bool Remove(const FOfferData& OfferData)
+		{
+			CartItemToIterMap::iterator It = CartItemMap.find(OfferData.Id);
+			if (It != CartItemMap.end())
+			{
+				CartItems.erase(It->second);
+				CartItemMap.erase(OfferData.Id);
+				
+				return true;
+			}
+
+			return false;
+		}
+
+		void Clear()
+		{
+			CartItems.clear();
+			CartItemMap.clear();
+		}
+	};
+
 	/** Respond to the logged in game event */
 	void OnLoggedIn(FEpicAccountId UserId);
 	/** Respond to the logged out game event */
@@ -89,6 +158,8 @@ private:
 
 	/** The cached data dirty flag */
 	bool bDirty = false;
+	/** The cached cart data dirty flag */
+	bool bIsCartDirty = false;
 	/** How long until the next update */
 	float UpdateStoreTimer = 0.f;
 	/** The current user associated with the store */
@@ -98,6 +169,8 @@ private:
 	std::vector<FOfferData> Catalog;
 	/** The current entitlement cache */
 	std::vector<FEntitlementData> Entitlements;
+	/** The user's cart */
+	FCart UserCart;
 
 	/** The desired store update time */
 	static constexpr float UpdateStoreTimeoutSeconds = 300.f;

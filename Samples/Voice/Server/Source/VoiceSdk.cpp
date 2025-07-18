@@ -14,7 +14,7 @@
 #include "StringUtils.h"
 #include "CommandLine.h"
 
-#if ALLOW_RESERVED_PLATFORM_OPTIONS
+#if ALLOW_RESERVED_OPTIONS
 #include "ReservedPlatformOptions.h"
 #endif
 
@@ -185,6 +185,7 @@ EOS_Bool FVoiceSdk::LoadAndInitSdk()
 
 	EOS_Platform_RTCOptions RtcOptions = { 0 };
 	RtcOptions.ApiVersion = EOS_PLATFORM_RTCOPTIONS_API_LATEST;
+	RtcOptions.BackgroundMode = EOS_ERTCBackgroundMode::EOS_RTCBM_LeaveRooms;
 
 #ifdef _WIN32
 	// Get absolute path for xaudio2_9redist.dll file
@@ -204,11 +205,11 @@ EOS_Bool FVoiceSdk::LoadAndInitSdk()
 
 	PlatformOptions.RTCOptions = &RtcOptions;
 
-#if ALLOW_RESERVED_PLATFORM_OPTIONS
+#if ALLOW_RESERVED_OPTIONS
 	SetReservedPlatformOptions(PlatformOptions);
 #else
 	PlatformOptions.Reserved = NULL;
-#endif // ALLOW_RESERVED_PLATFORM_OPTIONS
+#endif // ALLOW_RESERVED_OPTIONS
 
 	PlatformHandle = EOS_Platform_Create(&PlatformOptions);
 

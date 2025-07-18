@@ -62,6 +62,11 @@ protected:
 		bSessionMaxPlayersSelected = true;
 	}
 
+	void OnSessionRestrictedPlatformSelected(const std::wstring& Selection)
+	{
+		bSessionRestrictedPlatformSelected = true;
+	}
+
 private:
 	/** Background */
 	WidgetPtr Background;
@@ -77,6 +82,9 @@ private:
 
 	/** Session max players */
 	std::shared_ptr<FDropDownList> MaxPlayersDropDown;
+
+	/** Restricted Platforms */
+	std::shared_ptr<FDropDownList> RestrictedPlatformsDropDown;
 
 	/** Session join in progress flag */
 	std::shared_ptr<FCheckboxWidget> JoinInProgressCheckbox;
@@ -101,4 +109,7 @@ private:
 
 	/** Has user selected a value for max players num? */
 	bool bSessionMaxPlayersSelected = false;
+
+	/** Has user selected a value for restricted platform? */
+	bool bSessionRestrictedPlatformSelected = false;
 };

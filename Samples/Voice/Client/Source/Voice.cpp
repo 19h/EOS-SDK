@@ -93,8 +93,8 @@ void FVoice::Init()
 
 	SubscribeToNotifications();
 	
-	GetAudioInputDevices();
-	GetAudioOutputDevices();
+	UpdateAudioInputDevices();
+	UpdateAudioOutputDevices();
 }
 
 void FVoice::OnShutdown()
@@ -158,8 +158,9 @@ void FVoice::OnUserConnectLoggedIn(FProductUserId ProductUserId)
 {
 	LocalProductUserId = ProductUserId;
 
-	GetAudioInputDevices();
-	GetAudioOutputDevices();
+	// After login cache devices is empty
+	UpdateAudioInputDevices();
+	UpdateAudioOutputDevices();
 }
 
 void FVoice::OnGameEvent(const FGameEvent& Event)
@@ -683,21 +684,31 @@ void FVoice::HeartbeatVoiceSession(FProductUserId ProductUserId, const std::stri
 	});
 }
 
+void FVoice::UpdateAudioInputDevices()
+{
+	EOS_RTCAudio_QueryInputDevicesInformationOptions Options = {};
+	Options.ApiVersion = EOS_RTCAUDIO_QUERYINPUTDEVICESINFORMATION_API_LATEST;
+	EOS_RTCAudio_QueryInputDevicesInformation(RTCAudioHandle, &Options, NULL, OnInputDevicesInformationCb);
+}
+
 void FVoice::GetAudioInputDevices()
 {
 	AudioInputDeviceNames.clear();
 	AudioInputDeviceIds.clear();
 
-	EOS_RTCAudio_GetAudioInputDevicesCountOptions Options = {};
-	Options.ApiVersion = EOS_RTCAUDIO_GETAUDIOINPUTDEVICESCOUNT_API_LATEST;
-	uint32_t Count = EOS_RTCAudio_GetAudioInputDevicesCount(RTCAudioHandle, &Options);
+	EOS_RTCAudio_GetInputDevicesCountOptions Options = {};
+	Options.ApiVersion = EOS_RTCAUDIO_GETINPUTDEVICESCOUNT_API_LATEST;
+	uint32_t Count = EOS_RTCAudio_GetInputDevicesCount(RTCAudioHandle, &Options);
+
 	std::wstring DefaultDeviceName;
 	for (uint32_t Index = 0; Index < Count; Index++)
 	{
-		EOS_RTCAudio_GetAudioInputDeviceByIndexOptions GetByIndexOptions = {};
-		GetByIndexOptions.ApiVersion = EOS_RTCAUDIO_GETAUDIOINPUTDEVICEBYINDEX_API_LATEST;
-		GetByIndexOptions.DeviceInfoIndex = Index;
-		if (const EOS_RTCAudio_AudioInputDeviceInfo* AudioDeviceInfo = EOS_RTCAudio_GetAudioInputDeviceByIndex(RTCAudioHandle, &GetByIndexOptions))
+		EOS_RTCAudio_InputDeviceInformation* AudioDeviceInfo;
+		EOS_RTCAudio_CopyInputDeviceInformationByIndexOptions CopyByIndexOptions = {};
+		CopyByIndexOptions.ApiVersion = EOS_RTCAUDIO_COPYINPUTDEVICEINFORMATIONBYINDEX_API_LATEST;
+		CopyByIndexOptions.DeviceIndex = Index;
+
+		if (EOS_RTCAudio_CopyInputDeviceInformationByIndex(RTCAudioHandle, &CopyByIndexOptions, &AudioDeviceInfo) == EOS_EResult::EOS_Success)
 		{
 			std::string DeviceName = AudioDeviceInfo->DeviceName;
 			AudioInputDeviceNames.emplace_back(FStringUtils::Widen(DeviceName));
@@ -709,6 +720,8 @@ void FVoice::GetAudioInputDevices()
 			{
 				DefaultDeviceName = FStringUtils::Widen(DeviceName);
 			}
+
+			EOS_RTCAudio_InputDeviceInformation_Release(AudioDeviceInfo);
 		}
 	}
 
@@ -716,21 +729,30 @@ void FVoice::GetAudioInputDevices()
 	FGame::Get().OnGameEvent(Event);
 }
 
+void FVoice::UpdateAudioOutputDevices()
+{
+	EOS_RTCAudio_QueryOutputDevicesInformationOptions Options = {};
+	Options.ApiVersion = EOS_RTCAUDIO_QUERYOUTPUTDEVICESINFORMATION_API_LATEST;
+	EOS_RTCAudio_QueryOutputDevicesInformation(RTCAudioHandle, &Options, NULL, OnOutputDevicesInformationCb);
+}
+
 void FVoice::GetAudioOutputDevices()
 {
 	AudioOutputDeviceNames.clear();
 	AudioOutputDeviceIds.clear();
 
-	EOS_RTCAudio_GetAudioOutputDevicesCountOptions Options = {};
-	Options.ApiVersion = EOS_RTCAUDIO_GETAUDIOOUTPUTDEVICESCOUNT_API_LATEST;
-	uint32_t Count = EOS_RTCAudio_GetAudioOutputDevicesCount(RTCAudioHandle, &Options);
+	EOS_RTCAudio_GetOutputDevicesCountOptions Options = {};
+	Options.ApiVersion = EOS_RTCAUDIO_GETOUTPUTDEVICESCOUNT_API_LATEST;
+	uint32_t Count = EOS_RTCAudio_GetOutputDevicesCount(RTCAudioHandle, &Options);
+
 	std::wstring DefaultDeviceName;
 	for (uint32_t Index = 0; Index < Count; Index++)
 	{
-		EOS_RTCAudio_GetAudioOutputDeviceByIndexOptions GetByIndexOptions = {};
-		GetByIndexOptions.ApiVersion = EOS_RTCAUDIO_GETAUDIOOUTPUTDEVICEBYINDEX_API_LATEST;
-		GetByIndexOptions.DeviceInfoIndex = Index;
-		if (const EOS_RTCAudio_AudioOutputDeviceInfo* AudioDeviceInfo = EOS_RTCAudio_GetAudioOutputDeviceByIndex(RTCAudioHandle, &GetByIndexOptions))
+		EOS_RTCAudio_CopyOutputDeviceInformationByIndexOptions CopyByIndexOptions = {};
+		CopyByIndexOptions.ApiVersion = EOS_RTCAUDIO_COPYOUTPUTDEVICEINFORMATIONBYINDEX_API_LATEST;
+		CopyByIndexOptions.DeviceIndex = Index;
+		EOS_RTCAudio_OutputDeviceInformation* AudioDeviceInfo;
+		if (EOS_RTCAudio_CopyOutputDeviceInformationByIndex(RTCAudioHandle, &CopyByIndexOptions, &AudioDeviceInfo) == EOS_EResult::EOS_Success)
 		{
 			std::string DeviceName = AudioDeviceInfo->DeviceName;
 			AudioOutputDeviceNames.emplace_back(FStringUtils::Widen(DeviceName));
@@ -742,6 +764,8 @@ void FVoice::GetAudioOutputDevices()
 			{
 				DefaultDeviceName = FStringUtils::Widen(DeviceName);
 			}
+
+			EOS_RTCAudio_OutputDeviceInformation_Release(AudioDeviceInfo);
 		}
 	}
 
@@ -1161,18 +1185,13 @@ void FVoice::SetAudioInputDevice(const std::wstring& DeviceId)
 	{
 		std::string NarrowDeviceId = FStringUtils::Narrow(DeviceId);
 
-		EOS_RTCAudio_SetAudioInputSettingsOptions AudioInputSettingsOptions = {};
-		AudioInputSettingsOptions.ApiVersion = EOS_RTCAUDIO_SETAUDIOINPUTSETTINGS_API_LATEST;
-		AudioInputSettingsOptions.LocalUserId = LocalProductUserId;
-		AudioInputSettingsOptions.DeviceId = NarrowDeviceId.c_str();
-		AudioInputSettingsOptions.bPlatformAEC = EOS_FALSE;
-		AudioInputSettingsOptions.Volume = 50.f;
+		EOS_RTCAudio_SetInputDeviceSettingsOptions InputDeviceSettingsOptions = {};
+		InputDeviceSettingsOptions.ApiVersion = EOS_RTCAUDIO_SETINPUTDEVICESETTINGS_API_LATEST;
+		InputDeviceSettingsOptions.LocalUserId = LocalProductUserId;
+		InputDeviceSettingsOptions.RealDeviceId = NarrowDeviceId.c_str();
+		InputDeviceSettingsOptions.bPlatformAEC = EOS_FALSE;
 
-		EOS_EResult Result = EOS_RTCAudio_SetAudioInputSettings(RTCAudioHandle, &AudioInputSettingsOptions);
-		if (Result != EOS_EResult::EOS_Success)
-		{
-			FDebugLog::LogError(L"[EOS SDK] Voice - Failed to update audio input - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Result)).c_str());
-		}
+		EOS_RTCAudio_SetInputDeviceSettings(RTCAudioHandle, &InputDeviceSettingsOptions, NULL, OnSetAudioInputDeviceCb);
 	}
 }
 
@@ -1182,17 +1201,12 @@ void FVoice::SetAudioOutputDevice(const std::wstring& DeviceId)
 	{
 		std::string NarrowDeviceId = FStringUtils::Narrow(DeviceId);
 
-		EOS_RTCAudio_SetAudioOutputSettingsOptions AudioOutputSettingsOptions = {};
-		AudioOutputSettingsOptions.ApiVersion = EOS_RTCAUDIO_SETAUDIOOUTPUTSETTINGS_API_LATEST;
+		EOS_RTCAudio_SetOutputDeviceSettingsOptions AudioOutputSettingsOptions = {};
+		AudioOutputSettingsOptions.ApiVersion = EOS_RTCAUDIO_SETOUTPUTDEVICESETTINGS_API_LATEST;
 		AudioOutputSettingsOptions.LocalUserId = LocalProductUserId;
-		AudioOutputSettingsOptions.DeviceId = NarrowDeviceId.c_str();
-		AudioOutputSettingsOptions.Volume = 50.f;
+		AudioOutputSettingsOptions.RealDeviceId = NarrowDeviceId.c_str();
 
-		EOS_EResult Result = EOS_RTCAudio_SetAudioOutputSettings(RTCAudioHandle, &AudioOutputSettingsOptions);
-		if (Result != EOS_EResult::EOS_Success)
-		{
-			FDebugLog::LogError(L"[EOS SDK] Voice - Failed to update audio output - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Result)).c_str());
-		}
+		EOS_RTCAudio_SetOutputDeviceSettings(RTCAudioHandle, &AudioOutputSettingsOptions, NULL, OnSetAudioOutputDeviceCb);
 	}
 }
 
@@ -1273,8 +1287,8 @@ void FVoice::OnParticipantAudioUpdated(FProductUserId ProductUserId, std::wstrin
 
 void FVoice::OnAudioDevicesChanged()
 {
-	GetAudioInputDevices();
-	GetAudioOutputDevices();
+	UpdateAudioInputDevices();
+	UpdateAudioOutputDevices();
 }
 
 void EOS_CALL FVoice::OnJoinRoomCb(const EOS_RTC_JoinRoomCallbackInfo* Data)
@@ -1464,3 +1478,80 @@ void EOS_CALL FVoice::OnUpdateParticipantVolumeCb(const EOS_RTCAudio_UpdateParti
 		FDebugLog::LogError(L"Voice (OnUpdateParticipantVolumeCb): EOS_RTCAudio_UpdateParticipantVolumeCallbackInfo is null");
 	}
 }
+
+void EOS_CALL FVoice::OnInputDevicesInformationCb(const EOS_RTCAudio_OnQueryInputDevicesInformationCallbackInfo* Data)
+{
+	if (Data)
+	{
+		if (Data->ResultCode != EOS_EResult::EOS_Success)
+		{
+			FDebugLog::LogError(L"Voice (OnInputDevicesInformationCb) - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+		}
+		else
+		{
+			FGame::Get().GetVoice()->GetAudioInputDevices();
+		}
+	}
+	else
+	{
+		FDebugLog::LogError(L"Voice (OnInputDevicesInformationCb): EOS_RTCAudio_OnQueryInputDevicesInformationCallbackInfo is null");
+	}
+}
+
+void EOS_CALL FVoice::OnOutputDevicesInformationCb(const EOS_RTCAudio_OnQueryOutputDevicesInformationCallbackInfo* Data)
+{
+	if (Data)
+	{
+		if (Data->ResultCode != EOS_EResult::EOS_Success)
+		{
+			FDebugLog::LogError(L"Voice (OnOutputDevicesInformationCb) - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+		}
+		else
+		{
+			FGame::Get().GetVoice()->GetAudioOutputDevices();
+		}
+	}
+	else
+	{
+		FDebugLog::LogError(L"Voice (OnOutputDevicesInformationCb): EOS_RTCAudio_OnQueryOutputDevicesInformationCallbackInfo is null");
+	}
+}
+
+void EOS_CALL FVoice::OnSetAudioInputDeviceCb(const EOS_RTCAudio_OnSetInputDeviceSettingsCallbackInfo* Data)
+{
+	if (Data)
+	{
+		if (Data->ResultCode != EOS_EResult::EOS_Success)
+		{
+			FDebugLog::LogError(L"[EOS SDK] Voice - Failed to update audio input - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+		}
+		else
+		{
+			FDebugLog::Log(L"Voice (OnSetAudioInputDeviceCb) - RealDeviceId: %ls", FStringUtils::Widen(Data->RealDeviceId).c_str());
+		}
+	}
+	else
+	{
+		FDebugLog::LogError(L"Voice (OnSetAudioInputDeviceCb): EOS_RTCAudio_OnSetInputDeviceSettingsCallbackInfo is null");
+	}
+}
+
+void EOS_CALL FVoice::OnSetAudioOutputDeviceCb(const EOS_RTCAudio_OnSetOutputDeviceSettingsCallbackInfo* Data)
+{
+	if (Data)
+	{
+		if (Data->ResultCode != EOS_EResult::EOS_Success)
+		{
+			FDebugLog::LogError(L"[EOS SDK] Voice - Failed to update audio output - Error: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+		}
+		else
+		{
+			FDebugLog::Log(L"Voice (OnSetAudioOutputDeviceCb) - RealDeviceId: %ls", FStringUtils::Widen(Data->RealDeviceId).c_str());
+		}
+	}
+	else
+	{
+		FDebugLog::LogError(L"Voice (OnSetAudioOutputDeviceCb): EOS_RTCAudio_OnSetOutputDeviceSettingsCallbackInfo is null");
+	}
+}
+

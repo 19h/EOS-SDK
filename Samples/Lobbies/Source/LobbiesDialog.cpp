@@ -36,7 +36,7 @@ static FLobbySearchResultTableRowData BuildTableRowDataFromLobby(const FLobby& L
 	Result.Values[FLobbySearchResultTableRowData::EValue::OwnerDisplayName] = OwnerName;
 
 	wchar_t Buffer[32];
-	wsprintf(Buffer, L"%d/%d", Lobby.Members.size(), Lobby.MaxNumLobbyMembers);
+	wsprintf(Buffer, L"%d/%d", Lobby.MaxNumLobbyMembers - Lobby.AvailableSlots, Lobby.MaxNumLobbyMembers);
 
 	Result.Values[FLobbySearchResultTableRowData::EValue::NumMembers] = std::wstring(Buffer);
 
@@ -629,17 +629,7 @@ void FLobbiesDialog::SearchLobbyByLevel(const std::wstring& LevelName)
 {
 	std::string SearchLevelName =  FStringUtils::Narrow(FStringUtils::ToUpper(LevelName));
 
-	std::vector<FLobbyAttribute> Attributes;
-
-	FLobbyAttribute LevelAttribute;
-	LevelAttribute.Key = "LEVEL";
-	LevelAttribute.ValueType = FLobbyAttribute::String;
-	LevelAttribute.AsString = SearchLevelName;
-	LevelAttribute.Visibility = EOS_ELobbyAttributeVisibility::EOS_LAT_PUBLIC;
-
-	Attributes.push_back(LevelAttribute);
-
-	FGame::Get().GetLobbies()->Search(Attributes);
+	FGame::Get().GetLobbies()->SearchLobbyByLevel(SearchLevelName);
 	
 	//change icon
 	SearchButton->Hide();
@@ -648,19 +638,9 @@ void FLobbiesDialog::SearchLobbyByLevel(const std::wstring& LevelName)
 
 void FLobbiesDialog::SearchLobbyByBucketId(const std::wstring& BucketId)
 {
-	std::string SearchBucketId = FStringUtils::Narrow(FStringUtils::ToUpper(BucketId));
+	std::string SearchBucketId = FStringUtils::Narrow(BucketId);
 
-	std::vector<FLobbyAttribute> Attributes;
-
-	FLobbyAttribute LevelAttribute;
-	LevelAttribute.Key = EOS_LOBBY_SEARCH_BUCKET_ID;
-	LevelAttribute.ValueType = FLobbyAttribute::String;
-	LevelAttribute.AsString = SearchBucketId;
-	LevelAttribute.Visibility = EOS_ELobbyAttributeVisibility::EOS_LAT_PUBLIC;
-
-	Attributes.push_back(LevelAttribute);
-
-	FGame::Get().GetLobbies()->Search(Attributes);
+	FGame::Get().GetLobbies()->SearchLobbyByBucketId(SearchBucketId);
 
 	//change icon
 	SearchButton->Hide();

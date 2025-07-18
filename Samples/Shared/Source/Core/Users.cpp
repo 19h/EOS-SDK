@@ -15,7 +15,7 @@
 
 FUsers::FUsers()
 {
-		
+
 }
 
 FUsers::~FUsers()
@@ -159,7 +159,7 @@ void FUsers::QueryExternalAccountMappings(FProductUserId CurrentUser, const std:
 
 	std::vector<FEpicAccountId> FilteredAccountsToQuery;
 
-	//Filter out the once that were already queried lately.
+	// Filter out the once that were already queried lately.
 	for (const FEpicAccountId& NextAccountId : AccountsToQuery)
 	{
 		if (ExternalAccountsMap.find(NextAccountId) == ExternalAccountsMap.end())
@@ -173,7 +173,7 @@ void FUsers::QueryExternalAccountMappings(FProductUserId CurrentUser, const std:
 
 	if (FilteredAccountsToQuery.empty())
 	{
-		//Nothing left to query
+		// Nothing left to query
 		return;
 	}
 
@@ -185,7 +185,7 @@ void FUsers::QueryExternalAccountMappings(FProductUserId CurrentUser, const std:
 		OutstandingExternalAccountsToQueryChars.push_back(OutstandingExternalAccountsToQueryStrings.back().c_str());
 	}
 
-	EOS_Connect_QueryExternalAccountMappingsOptions QueryOptions;
+	EOS_Connect_QueryExternalAccountMappingsOptions QueryOptions = {};
 	QueryOptions.ApiVersion = EOS_CONNECT_QUERYEXTERNALACCOUNTMAPPINGS_API_LATEST;
 	QueryOptions.AccountIdType = EOS_EExternalAccountType::EOS_EAT_EPIC;
 	QueryOptions.LocalUserId = CurrentUser;
@@ -234,7 +234,7 @@ void FUsers::QueryAccountMappings(FProductUserId CurrentUser, const std::vector<
 
 	std::vector<FProductUserId> FilteredAccountsToQuery;
 
-	//Filter out the once that were already queried lately.
+	// Filter out the once that were already queried lately.
 	for (const FProductUserId& NextProductId : AccountsToQuery)
 	{
 		if (ExternalToEpicAccountsMap.find(NextProductId) == ExternalToEpicAccountsMap.end())
@@ -253,7 +253,7 @@ void FUsers::QueryAccountMappings(FProductUserId CurrentUser, const std::vector<
 		FGameEvent Event(EGameEventType::EpicAccountsMappingNoChange, CurrentUser);
 		FGame::Get().OnGameEvent(Event);
 
-		//Nothing left to query
+		// Nothing left to query
 		return;
 	}
 
@@ -305,13 +305,13 @@ void FUsers::QueryDisplayName(FEpicAccountId TargetUserId)
 	auto Iter = CurrentlyQueriedDisplayNames.find(TargetUserId);
 	if (Iter != CurrentlyQueriedDisplayNames.end())
 	{
-		//Already queried
+		// Already queried
 		return;
 	}
 
 	CurrentlyQueriedDisplayNames.insert(TargetUserId);
 
-	//Do the actual query
+	// Do the actual query
 	FUsers::QueryUserInfo(TargetUserId, OnQueryDisplayNameFinishedCallback);
 }
 
@@ -396,7 +396,7 @@ void FUsers::UpdateExternalAccountMappings(EOS_ProductUserId LocalProductUserId)
 
 void FUsers::OnExternalAccountMappingsQueryFailure(EOS_ProductUserId LocalProductUserId)
 {
-	//Clear account ids that we were trying to query
+	// Clear account ids that we were trying to query
 	CurrentlyQueriedExternalAccounts.clear();
 }
 
@@ -438,8 +438,63 @@ void FUsers::UpdateQueriedAccountMappings(EOS_ProductUserId LocalProductUserId)
 
 void FUsers::OnAccountMappingsQueryFailure(EOS_ProductUserId LocalProductUserId)
 {
-	//Clear account ids that we were trying to query
+	// Clear account ids that we were trying to query
 	CurrentlyQueriedExternalToEpicAccounts.clear();
+}
+
+FUserData FUsers::CreateUserData(EOS_EpicAccountId LocalUserId, EOS_EpicAccountId TargetUserId)
+{
+	FUserData UserData;
+
+	EOS_HUserInfo UserInfoInterface = EOS_Platform_GetUserInfoInterface(FPlatform::GetPlatformHandle());
+
+	EOS_UserInfo_CopyBestDisplayNameOptions Options = {};
+	Options.ApiVersion = EOS_USERINFO_COPYBESTDISPLAYNAME_API_LATEST;
+	Options.LocalUserId = LocalUserId;
+	Options.TargetUserId = TargetUserId;
+
+	EOS_UserInfo_BestDisplayName* BestDisplayName = nullptr;
+
+	EOS_EResult Result = EOS_UserInfo_CopyBestDisplayName(UserInfoInterface, &Options, &BestDisplayName);
+
+	if (Result == EOS_EResult::EOS_Success)
+	{
+		assert(BestDisplayName->DisplayName);
+
+		UserData.UserId = TargetUserId;
+		if (BestDisplayName->DisplayName)
+		{
+			UserData.Name = FStringUtils::Widen(BestDisplayName->DisplayName);
+		}
+
+		EOS_UserInfo_BestDisplayName_Release(BestDisplayName);
+	}
+	else if (Result == EOS_EResult::EOS_UserInfo_BestDisplayNameIndeterminate)
+	{
+		EOS_UserInfo_CopyBestDisplayNameWithPlatformOptions WithPlatformOptions = {};
+		WithPlatformOptions.ApiVersion = EOS_USERINFO_COPYBESTDISPLAYNAMEWITHPLATFORM_API_LATEST;
+		WithPlatformOptions.LocalUserId = LocalUserId;
+		WithPlatformOptions.TargetUserId = TargetUserId;
+		// Showcase samples don't render a platform specific list of users, e.g. list of platform friends, which is why falling back to EOS_OPT_Epic platform is appropriate here.
+		WithPlatformOptions.TargetPlatformType = EOS_OPT_Epic;
+
+		EOS_EResult Result = EOS_UserInfo_CopyBestDisplayNameWithPlatform(UserInfoInterface, &WithPlatformOptions, &BestDisplayName);
+
+		if (Result == EOS_EResult::EOS_Success)
+		{
+			assert(BestDisplayName->DisplayName);
+
+			UserData.UserId = TargetUserId;
+			if (BestDisplayName->DisplayName)
+			{
+				UserData.Name = FStringUtils::Widen(BestDisplayName->DisplayName);
+			}
+
+			EOS_UserInfo_BestDisplayName_Release(BestDisplayName);
+		}
+	}
+
+	return UserData;
 }
 
 void EOS_CALL FUsers::QueryUserInfoCompleteCallbackFn(const EOS_UserInfo_QueryUserInfoCallbackInfo* UserData)
@@ -456,26 +511,10 @@ void EOS_CALL FUsers::QueryUserInfoCompleteCallbackFn(const EOS_UserInfo_QueryUs
 
 	FDebugLog::Log(L"[EOS SDK] Query User Info Complete - User ID: %ls", FEpicAccountId(UserInfoQueryData->TargetUserId).ToString().c_str());
 
-	EOS_HUserInfo UserInfoInterface = EOS_Platform_GetUserInfoInterface(FPlatform::GetPlatformHandle());
-	EOS_UserInfo_CopyUserInfoOptions Options = {};
-	Options.ApiVersion = EOS_USERINFO_COPYUSERINFO_API_LATEST;
-	Options.LocalUserId = UserData->LocalUserId;
-	Options.TargetUserId = UserInfoQueryData->TargetUserId;
-
-	EOS_UserInfo* UserInfo = nullptr;
-
-	auto Result = EOS_UserInfo_CopyUserInfo(UserInfoInterface, &Options, &UserInfo);
-
-	if (UserInfo && Result == EOS_EResult::EOS_Success)
+	FUserData RetrievedUserData = FGame::Get().GetUsers()->CreateUserData(UserData->LocalUserId, UserInfoQueryData->TargetUserId);
+	if (RetrievedUserData.IsValid())
 	{
-		std::string DName = UserInfo->DisplayName;
-		std::wstring DisplayName = FStringUtils::Widen(DName);
-
-		FUserData RetrievedUserData;
-		RetrievedUserData.UserId = UserInfoQueryData->TargetUserId;
-		RetrievedUserData.Name = DisplayName;
-
-		FPlayerManager::Get().SetDisplayName(FEpicAccountId(RetrievedUserData.UserId), DisplayName);
+		FPlayerManager::Get().SetDisplayName(FEpicAccountId(RetrievedUserData.UserId), RetrievedUserData.Name);
 
 		FGameEvent Event(EGameEventType::UserInfoRetrieved, RetrievedUserData.UserId);
 		FGame::Get().OnGameEvent(Event);
@@ -485,8 +524,6 @@ void EOS_CALL FUsers::QueryUserInfoCompleteCallbackFn(const EOS_UserInfo_QueryUs
 		{
 			UserInfoQueryData->OnUserInfoRetrievedCallback(RetrievedUserData);
 		}
-
-		EOS_UserInfo_Release(UserInfo);
 	}
 
 	delete UserInfoQueryData;
@@ -530,7 +567,7 @@ void EOS_CALL FUsers::OnQueryExternalAccountMappingsCallback(const EOS_Connect_Q
 		{
 			FDebugLog::LogError(L"[EOS SDK] Query external account mappings error: %ls.", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
 
-			//Cancel current query
+			// Cancel current query
 			FGame::Get().GetUsers()->OnExternalAccountMappingsQueryFailure(Data->LocalUserId);
 		}
 	}
@@ -550,7 +587,7 @@ void EOS_CALL FUsers::OnQueryAccountMappingsCallback(const EOS_Connect_QueryProd
 		{
 			FDebugLog::LogError(L"[EOS SDK] Query account mappings error: %ls.", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
 
-			//Cancel current query
+			// Cancel current query
 			FGame::Get().GetUsers()->OnAccountMappingsQueryFailure(Data->LocalUserId);
 		}
 	}

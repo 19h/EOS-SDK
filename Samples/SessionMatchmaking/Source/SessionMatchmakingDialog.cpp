@@ -357,6 +357,10 @@ void FSessionMatchmakingDialog::OnGameEvent(const FGameEvent& Event)
 	{
 		StopSearch();
 	}
+	else if (Event.GetType() == EGameEventType::RequestToJoinFriendSession)
+	{
+		FGame::Get().GetSessions()->RequestToJoinSession(Event.GetProductUserId());
+	}
 }
 
 void FSessionMatchmakingDialog::SetSelectedSession(const std::wstring& InSessionName, const std::string& SessionId, bool bPresenceSession)

@@ -243,15 +243,15 @@ public:
 	void SetProductUserID(FEpicAccountId UserId, FProductUserId ProductUserId);
 
 	/**
-	* Singleton
-	*/
+	 * Singleton
+	 */
 	static FPlayerManager& __cdecl Get();
 
 	/**
-	* Receives game event
-	*
-	* @param Event - Game event to act on
-	*/
+	 * Receives game event
+	 *
+	 * @param Event - Game event to act on
+	 */
 	void OnGameEvent(const FGameEvent& Event);
 
 private:
@@ -265,8 +265,11 @@ private:
 	 */
 	void SetPresenceRichText(FEpicAccountId UserId, const std::string RichText);
 
-	/** Test setting Presence Rich Text */
-	void TestSetPresence(const std::wstring& RichText);
+	/** Sets presence rich text for the local user */
+	void SetPresenceRichText(const std::wstring& RichText);
+
+	/** Sets initial presence for the local user */
+	void SetInitialPresence();
 
 	static void EOS_CALL SetPresenceCallbackFn(const EOS_Presence_SetPresenceCallbackInfo* Data);
 

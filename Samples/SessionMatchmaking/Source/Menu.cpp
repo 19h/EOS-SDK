@@ -10,6 +10,7 @@
 #include "SessionMatchmakingDialog.h"
 #include "FriendsDialog.h"
 #include "SessionInviteReceivedDialog.h"
+#include "RequestToJoinSessionReceivedDialog.h"
 #include "NewSessionDialog.h"
 #include "SampleConstants.h"
 #include "Menu.h"
@@ -27,6 +28,7 @@ void FMenu::Create()
 	CreateFriendsDialog();
 	CreateSessionInviteDialog();
 	CreateNewSessionDialog();
+	CreateRequestToJoinSessionDialog();
 
 	FBaseMenu::Create();
 }
@@ -37,6 +39,12 @@ void FMenu::Release()
 	{
 		SessionMatchmakingDialog->Release();
 		SessionMatchmakingDialog.reset();
+	}
+
+	if (RequestToJoinSessionDialog)
+	{
+		RequestToJoinSessionDialog->Release();
+		RequestToJoinSessionDialog.reset();
 	}
 
 	FBaseMenu::Release();
@@ -87,6 +95,11 @@ void FMenu::UpdateLayout(int Width, int Height)
 	}
 
 	if (AuthDialogs) AuthDialogs->UpdateLayout();
+
+	if (RequestToJoinSessionDialog)
+	{
+		RequestToJoinSessionDialog->SetPosition(Vector2((WindowSize.x / 2.f) - SessionInviteDialog->GetSize().x / 2.0f, (WindowSize.y / 2.f) - SessionInviteDialog->GetSize().y - 2.0f));
+	}
 }
 
 void FMenu::CreateSessionMatchmakingDialog()
@@ -143,8 +156,8 @@ void FMenu::CreateSessionInviteDialog()
 void FMenu::CreateNewSessionDialog()
 {
 	NewSessionDialog = std::make_shared<FNewSessionDialog>(
-		Vector2(200.f, 370.f),
-		Vector2(370.0f, 260.0f),
+		Vector2(200.f, 410.f),
+		Vector2(370.0f, 300.0f),
 		5,
 		NormalFont->GetFont(),
 		SmallFont->GetFont()
@@ -157,17 +170,35 @@ void FMenu::CreateNewSessionDialog()
 	HideDialog(NewSessionDialog);
 }
 
+void FMenu::CreateRequestToJoinSessionDialog()
+{
+	RequestToJoinSessionDialog = std::make_shared<FRequestToJoinSessionReceivedDialog>(
+		Vector2(200.f, 200.f),
+		Vector2(370.0f, 210.f),
+		5,
+		NormalFont->GetFont(),
+		SmallFont->GetFont()
+		);
+
+	RequestToJoinSessionDialog->Create();
+	RequestToJoinSessionDialog->SetBorderColor(Color::UIBorderGrey);
+
+	AddDialog(RequestToJoinSessionDialog);
+	HideDialog(RequestToJoinSessionDialog);
+}
+
 void FMenu::OnGameEvent(const FGameEvent& Event)
 {
 	if (Event.GetType() == EGameEventType::InviteToSessionReceived)
 	{
 		if (SessionInviteDialog)
 		{
-			SessionInviteDialog->SetSessionInfo(L"Friend", FGame::Get().GetSessions()->GetInviteSession());
+			SessionInviteDialog->SetSessionInfo(FGame::Get().GetFriends()->GetFriendName(Event.GetProductUserId()), FGame::Get().GetSessions()->GetInviteSession());
 			ShowDialog(SessionInviteDialog);
 		}
 	}
-	else if (Event.GetType() == EGameEventType::OverlayInviteToSessionAccepted)
+	else if (Event.GetType() == EGameEventType::OverlayInviteToSessionAccepted
+			|| Event.GetType() == EGameEventType::OverlayInviteToSessionRejected)
 	{
 		if (SessionInviteDialog)
 		{
@@ -188,6 +219,17 @@ void FMenu::OnGameEvent(const FGameEvent& Event)
 		{
 			HideDialog(NewSessionDialog);
 			SessionMatchmakingDialog->Enable();
+		}
+	}
+	else if (Event.GetType() == EGameEventType::RequestToJoinSessionReceived)
+	{
+		// Note that there is only one Request to Join session dialog available so if a new Request to Join
+		// arrives before an existing Request To Join has been dispositioned, the incoming Request To Join
+		// will stomp the existing.
+		if (RequestToJoinSessionDialog)
+		{
+			RequestToJoinSessionDialog->SetFriendInfo(FGame::Get().GetFriends()->GetFriendName(Event.GetProductUserId()), Event.GetProductUserId());
+			ShowDialog(RequestToJoinSessionDialog);
 		}
 	}
 

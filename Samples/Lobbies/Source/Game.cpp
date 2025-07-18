@@ -37,7 +37,10 @@ void FGame::CreateConsoleCommands()
 		const std::vector<const wchar_t*> ExtraHelpMessageLines =
 		{
 			L" CURRENTLOBBY - to print out current lobby info;",
-			L" FINDLOBBY - to perform a lobby search;",
+			L" FINDLOBBY lobby_id - to perform a lobby search;",
+			L" FINDLOBBYBYBUCKETID bucket_id - to perform a lobby search by bucketid;",
+			L" FINDLOBBYBYLEVEL level - to perform a lobby search by type;",
+			L" CREATELOBBY bucketid level maxusers [public] [rtcenable] - to create lobby;"
 		};
 		AppendHelpMessageLines(ExtraHelpMessageLines);
 
@@ -91,6 +94,117 @@ void FGame::CreateConsoleCommands()
 				FDebugLog::LogError(L"EOS SDK is not initialized!");
 			}
 		});
+		Console->AddCommand(L"FINDLOBBYBYBUCKETID", [](const std::vector<std::wstring>& args)
+		{
+			if (FPlatform::IsInitialized())
+			{
+				if (FGame::Get().GetLobbies())
+				{
+					if (args.size() == 1)
+					{
+						FGame::Get().GetLobbies()->SearchLobbyByBucketId(FStringUtils::Narrow(args[0]));
+					}
+					else
+					{
+						FDebugLog::LogError(L"BacketId is required as the only argument.");
+					}
+				}
+				else
+				{
+					FDebugLog::LogError(L"EOS SDK Lobbies are not initialized!");
+				}
+			}
+			else
+			{
+				FDebugLog::LogError(L"EOS SDK is not initialized!");
+			}
+		});
+		Console->AddCommand(L"FINDLOBBYBYLEVEL", [](const std::vector<std::wstring>& args)
+		{
+			if (FPlatform::IsInitialized())
+			{
+				if (FGame::Get().GetLobbies())
+				{
+					if (args.size() == 1)
+					{
+						FGame::Get().GetLobbies()->SearchLobbyByLevel(FStringUtils::Narrow(FStringUtils::ToUpper(args[0])));
+					}
+					else
+					{
+						FDebugLog::LogError(L"Lobby's type is required as the only argument.");
+					}
+				}
+				else
+				{
+					FDebugLog::LogError(L"EOS SDK Lobbies are not initialized!");
+				}
+			}
+			else
+			{
+				FDebugLog::LogError(L"EOS SDK is not initialized!");
+			}
+		});
+		Console->AddCommand(L"CREATELOBBY", [](const std::vector<std::wstring>& args)
+		{
+			if (FPlatform::IsInitialized())
+			{
+				if (FGame::Get().GetLobbies())
+				{
+					if (FGame::Get().GetLobbies()->GetCurrentLobby().IsValid())
+					{
+						FDebugLog::LogError(L"You already in lobby!");
+					}
+					else if (args.size() >= 3)
+					{
+						bool bPublicPermission = false;
+						bool bRTCEnable = false;
+						if (args.size() > 3)
+						{
+							for (int i = 3; i < (int)args.size(); i++)
+							{
+								if (FStringUtils::ToUpper(args[i]) == L"PUBLIC")
+								{
+									bPublicPermission = true;
+								}
+								else if (FStringUtils::ToUpper(args[i]) == L"RTCENABLE")
+								{
+									bRTCEnable = true;
+								}
+							}
+						}
+						FLobby Lobby;
+						Lobby.MaxNumLobbyMembers = atoi(FStringUtils::Narrow(args[2]).c_str());
+						Lobby.Permission = (bPublicPermission ? EOS_ELobbyPermissionLevel::EOS_LPL_PUBLICADVERTISED : EOS_ELobbyPermissionLevel::EOS_LPL_INVITEONLY);
+						Lobby.bPresenceEnabled = true;
+						Lobby.bRTCRoomEnabled = bRTCEnable;
+						Lobby.bAllowInvites = true;
+						Lobby.BucketId = FStringUtils::Narrow(args[0]);
+
+						FLobbyAttribute Attribute;
+						Attribute.Key = "LEVEL";
+						Attribute.AsString = FStringUtils::Narrow(args[1]);
+						Attribute.ValueType = FLobbyAttribute::String;
+						Attribute.Visibility = EOS_ELobbyAttributeVisibility::EOS_LAT_PUBLIC;
+
+						Lobby.Attributes.push_back(Attribute);
+
+						FGame::Get().GetLobbies()->CreateLobby(Lobby);
+					}
+					else
+					{
+						FDebugLog::LogError(L"Additional parameters required. Use help command");
+					}
+				}
+				else
+				{
+					FDebugLog::LogError(L"EOS SDK Lobbies are not initialized!");
+				}
+			}
+			else
+			{
+				FDebugLog::LogError(L"EOS SDK is not initialized!");
+			}
+		});
 
 	}
 }
@@ -110,6 +224,7 @@ void FGame::Create()
 
 	Lobbies->SubscribeToLobbyInvites();
 	Lobbies->SubscribeToLobbyUpdates();
+	Lobbies->SubscribeToLeaveLobbyUI();
 }
 
 void FGame::OnGameEvent(const FGameEvent& Event)

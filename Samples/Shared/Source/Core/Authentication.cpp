@@ -51,7 +51,7 @@ bool FAuthentication::Login(ELoginMode LoginMode, std::wstring FirstStr, std::ws
 	EOS_Auth_Credentials Credentials = {};
 	Credentials.ApiVersion = EOS_AUTH_CREDENTIALS_API_LATEST;
 
-	EOS_Auth_LoginOptions LoginOptions;
+	EOS_Auth_LoginOptions LoginOptions = {};
 	memset(&LoginOptions, 0, sizeof(LoginOptions));
 	LoginOptions.ApiVersion = EOS_AUTH_LOGIN_API_LATEST;
 
@@ -63,7 +63,8 @@ bool FAuthentication::Login(ELoginMode LoginMode, std::wstring FirstStr, std::ws
 			 FCommandLine::Get().HasParam(CommandLineConstants::ScopesFriendsList) ||
 			 FCommandLine::Get().HasParam(CommandLineConstants::ScopesPresence) ||
 			 FCommandLine::Get().HasParam(CommandLineConstants::ScopesFriendsManagement) ||
-			 FCommandLine::Get().HasParam(CommandLineConstants::ScopesEmail))
+			 FCommandLine::Get().HasParam(CommandLineConstants::ScopesEmail) ||
+			 FCommandLine::Get().HasParam(CommandLineConstants::ScopesCountry))
 	{
 		if (FCommandLine::Get().HasParam(CommandLineConstants::ScopesBasicProfile))
 		{
@@ -85,10 +86,14 @@ bool FAuthentication::Login(ELoginMode LoginMode, std::wstring FirstStr, std::ws
 		{
 			LoginOptions.ScopeFlags |= EOS_EAuthScopeFlags::EOS_AS_Email;
 		}
+		if (FCommandLine::Get().HasParam(CommandLineConstants::ScopesCountry))
+		{
+			LoginOptions.ScopeFlags |= EOS_EAuthScopeFlags::EOS_AS_Country;
+		}
 	}
 	else
 	{
-		LoginOptions.ScopeFlags = EOS_EAuthScopeFlags::EOS_AS_BasicProfile | EOS_EAuthScopeFlags::EOS_AS_FriendsList | EOS_EAuthScopeFlags::EOS_AS_Presence;
+		LoginOptions.ScopeFlags = DefaultLoginScope;
 	}
 
 	// We need to use a big enough size to support a steam auth session ticket (see where GetAuthSessionTicket is called).
@@ -124,12 +129,6 @@ bool FAuthentication::Login(ELoginMode LoginMode, std::wstring FirstStr, std::ws
 			FDebugLog::Log(L"[EOS SDK] Logging In with Exchange Code");
 			Credentials.Token = FirstParamStr;
 			Credentials.Type = EOS_ELoginCredentialType::EOS_LCT_ExchangeCode;
-			break;
-		}
-		case ELoginMode::DeviceCode:
-		{
-			FDebugLog::Log(L"[EOS SDK] Logging In with Device Code");
-			Credentials.Type = EOS_ELoginCredentialType::EOS_LCT_DeviceCode;
 			break;
 		}
 		case ELoginMode::DevAuth:
@@ -192,7 +191,7 @@ void FAuthentication::Logout(FEpicAccountId UserId)
 {
 	FDebugLog::Log(L"[EOS SDK] Logging Out");
 
-	EOS_Auth_LogoutOptions LogoutOptions;
+	EOS_Auth_LogoutOptions LogoutOptions = {};
 	LogoutOptions.ApiVersion = EOS_AUTH_LOGOUT_API_LATEST;
 	LogoutOptions.LocalUserId = UserId.AccountId;
 
@@ -340,7 +339,7 @@ void FAuthentication::ConnectLogin(FEpicAccountId UserId)
 
 	if (EOS_Auth_CopyUserAuthToken(AuthHandle, &CopyTokenOptions, UserId, &UserAuthToken) == EOS_EResult::EOS_Success)
 	{
-		EOS_Connect_Credentials Credentials;
+		EOS_Connect_Credentials Credentials = {};
 		Credentials.ApiVersion = EOS_CONNECT_CREDENTIALS_API_LATEST;
 		Credentials.Token = UserAuthToken->AccessToken;
 		Credentials.Type = EOS_EExternalCredentialType::EOS_ECT_EPIC;
@@ -396,10 +395,6 @@ void EOS_CALL FAuthentication::LoginCompleteCallbackFn(const EOS_Auth_LoginCallb
 		FGameEvent Event(EGameEventType::UserLoggedIn, Data->LocalUserId);
 		FGame::Get().OnGameEvent(Event);
 	}
-	else if (Data->ResultCode == EOS_EResult::EOS_Auth_PinGrantCode)
-	{
-		FDebugLog::LogWarning(L"[EOS SDK] Waiting for PIN grant Code:%ls URI:%ls Expires:%d", FStringUtils::Widen(Data->PinGrantInfo->UserCode).c_str(), FStringUtils::Widen(Data->PinGrantInfo->VerificationURI).c_str(), Data->PinGrantInfo->ExpiresIn);
-	}
 	else if (Data->ResultCode == EOS_EResult::EOS_Auth_MFARequired)
 	{
 		FDebugLog::LogWarning(L"[EOS SDK] MFA Code needs to be entered before logging in");
@@ -424,19 +419,6 @@ void EOS_CALL FAuthentication::LoginCompleteCallbackFn(const EOS_Auth_LoginCallb
 		else
 		{
 			FDebugLog::LogError(L"[EOS SDK] Continuation Token is Invalid!");
-		}
-	}
-	else if (Data->ResultCode == EOS_EResult::EOS_Auth_AccountFeatureRestricted)
-	{
-		if (Data->AccountFeatureRestrictedInfo)
-		{
-			FDebugLog::LogWarning(L"[EOS SDK] Account is restricted. User must continue login at URI: %ls", FStringUtils::Widen(Data->AccountFeatureRestrictedInfo->VerificationURI).c_str());
-		}
-		else
-		{
-			FDebugLog::LogError(L"[EOS SDK] Login failed, account is restricted");
-			FGameEvent Event(EGameEventType::UserLoginFailed, Data->LocalUserId);
-			FGame::Get().OnGameEvent(Event);
 		}
 	}
 	else if (EOS_EResult_IsOperationComplete(Data->ResultCode))
@@ -701,11 +683,6 @@ void FAuthentication::OnGameEvent(const FGameEvent& Event)
 	{
 		SendMFACode(Event.GetFirstStr());
 	}
-	else if (Event.GetType() == EGameEventType::UserLoginDeviceCodeCancel)
-	{
-		FEpicAccountId UserId = Event.GetUserId();
-		Logout(UserId);
-	}
 	else if (Event.GetType() == EGameEventType::UserLoggedIn)
 	{
 		assert(AuthHandle != nullptr);
@@ -750,6 +727,11 @@ void FAuthentication::OnGameEvent(const FGameEvent& Event)
 	{
 		PrintAuthTokenInfo();
 	}
+}
+
+void FAuthentication::SetDefaultLoginScope(EOS_EAuthScopeFlags LoginScope)
+{
+	DefaultLoginScope = LoginScope;
 }
 
 void FAuthentication::SendMFACode(std::wstring MFAStr)

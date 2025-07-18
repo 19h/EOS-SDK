@@ -14,6 +14,7 @@
 
 static const float NewLobbyDialogUIElementsXOffset = 20.0f;
 static const float NewLobbyDialogUIElementsYOffset = 20.0f;
+static const int MaxUsersInLobby = 6;
 
 FNewLobbyDialog::FNewLobbyDialog(Vector2 InPos,
 	Vector2 InSize,
@@ -86,7 +87,7 @@ FNewLobbyDialog::FNewLobbyDialog(Vector2 InPos,
 		DropDownListsSize + Vector2(0.0f, 85.0),
 		Layer - 1,
 		L"Max Players: ",
-		std::vector<std::wstring>({ L"2", L"3", L"4", L"5", L"6" }),
+		GetUsersOptionsList(2, MaxUsersInLobby),
 		InNormalFont,
 		EAlignmentType::Left,
 		Color::UIBackgroundGrey
@@ -184,6 +185,19 @@ FNewLobbyDialog::FNewLobbyDialog(Vector2 InPos,
 FNewLobbyDialog::~FNewLobbyDialog()
 {
 
+}
+
+std::vector<std::wstring> FNewLobbyDialog::GetUsersOptionsList(int MinUsers, int MaxUsers)
+{
+	std::vector<std::wstring> MaxUsersOptions;
+	MaxUsersOptions.reserve(MaxUsers);
+
+	for (int Option = MinUsers; Option <= MaxUsers; Option++)
+	{
+		MaxUsersOptions.push_back(std::to_wstring(Option));
+	}
+
+	return std::move(MaxUsersOptions);
 }
 
 void FNewLobbyDialog::SetPosition(Vector2 Pos)
@@ -328,17 +342,14 @@ void FNewLobbyDialog::SetEditingMode(bool bValue)
 	}
 
 	//Lower limit on players number.
-	const size_t CurrentNumPlayers = FGame::Get().GetLobbies()->GetCurrentLobby().Members.size();
-	size_t LowerLimitNumPlayers = (bEditingLobby) ? CurrentNumPlayers : 2;
+	const int CurrentNumPlayers = (int)FGame::Get().GetLobbies()->GetCurrentLobby().Members.size();
+	int LowerLimitNumPlayers = (bEditingLobby) ? CurrentNumPlayers : 2;
 	if (LowerLimitNumPlayers < 2)
 	{
 		LowerLimitNumPlayers = 2;
 	}
 
-	std::vector<std::wstring> AllOptions = { L"0", L"1", L"2", L"3", L"4", L"5", L"6" };
-	std::vector<std::wstring> NewOptions(AllOptions.begin() + LowerLimitNumPlayers, AllOptions.end());
-
-	MaxPlayersDropDown->UpdateOptionsList(NewOptions);
+	MaxPlayersDropDown->UpdateOptionsList(GetUsersOptionsList(LowerLimitNumPlayers, MaxUsersInLobby));
 }
 
 void FNewLobbyDialog::OnCreateLobbyPressed()

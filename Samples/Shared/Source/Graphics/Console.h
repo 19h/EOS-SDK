@@ -62,6 +62,15 @@ public:
 	bool AddCommand(const std::wstring& CmdStr, std::function<void(const std::vector<std::wstring>&)>&& CmdFunc);
 
 	/**
+	* Parse and executes a console command which if successful will call the callback function
+	*
+	* @param CmdStr - Command string with parameters
+	*
+	* @return True if the command was executed successfully
+	*/
+	bool RunCommand(const std::wstring& CmdStr);
+
+	/**
 	* Executes a console command which if successful will call the callback function
 	*
 	* @param CmdStr - Command string used to identify the console command

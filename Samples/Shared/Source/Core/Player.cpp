@@ -4,11 +4,13 @@
 #include "DebugLog.h"
 #include "StringUtils.h"
 #include "AccountHelpers.h"
+#include "Settings.h"
 #include "GameEvent.h"
 #include "Platform.h"
 #include "Game.h"
 #include "Users.h"
 #include "Player.h"
+#include "Console.h"
 
 #include "SampleConstants.h"
 #include "eos_presence.h"
@@ -260,8 +262,7 @@ void FPlayerManager::OnGameEvent(const FGameEvent& Event)
 
 		SetUserLocale(UserId);
 
-		const std::string RichText = "Using " + std::string(SampleConstants::GameName);
-		SetPresenceRichText(UserId, RichText);
+		SetInitialPresence();
 	}
 	else if (Event.GetType() == EGameEventType::UserLoggedOut)
 	{
@@ -330,6 +331,12 @@ void FPlayerManager::OnGameEvent(const FGameEvent& Event)
 
 			FGameEvent Event(EGameEventType::PlayerSessionBegin, UserId);
 			FGame::Get().OnGameEvent(Event);
+
+			std::wstring Command;
+			if (FSettings::Get().TryGetAsString(SettingsConstants::PostLoginCommand, Command))
+			{
+				FGame::Get().GetConsole()->RunCommand(Command);
+			}
 		}
 		else
 		{
@@ -342,7 +349,7 @@ void FPlayerManager::OnGameEvent(const FGameEvent& Event)
 	}
 	else if (Event.GetType() == EGameEventType::TestSetPresence)
 	{
-		TestSetPresence(Event.GetFirstStr());
+		SetPresenceRichText(Event.GetFirstStr());
 	}
 }
 
@@ -446,25 +453,44 @@ void EOS_CALL FPlayerManager::SetPresenceCallbackFn(const EOS_Presence_SetPresen
 	if (!Data)
 	{
 		FDebugLog::LogError(L"[EOS SDK] Set presence failed: no data");
+		return;
 	}
-	else if (Data->ResultCode != EOS_EResult::EOS_Success)
+
+	if (EOS_EResult_IsOperationComplete(Data->ResultCode) == EOS_FALSE)
+	{
+		// Operation is retrying so it is not complete yet
+		return;
+	}
+
+	if (Data->ResultCode != EOS_EResult::EOS_Success)
 	{
 		FDebugLog::LogError(L"[EOS SDK] Set presence failed: %ls.", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+		return;
 	}
-	else
-	{
-		FDebugLog::Log(L"[EOS SDK] Set presence success");
-	}
+
+	FDebugLog::Log(L"[EOS SDK] Set presence success");
 }
 
-void FPlayerManager::TestSetPresence(const std::wstring& RichText)
+void FPlayerManager::SetPresenceRichText(const std::wstring& RichText)
 {
 	if (!GetCurrentUser().IsValid())
 	{
 		return;
 	}
 
-	FDebugLog::Log(L"[EOS SDK] Testing Setting of Presence Rich Text: %ls", RichText.c_str());
+	FDebugLog::Log(L"[EOS SDK] Setting presence rich text: %ls", RichText.c_str());
 	std::string RichTextStr = FStringUtils::Narrow(RichText);
+	SetPresenceRichText(GetCurrentUser(), RichTextStr);
+}
+
+void FPlayerManager::SetInitialPresence()
+{
+	if (!GetCurrentUser().IsValid())
+	{
+		return;
+	}
+
+	const std::string RichTextStr = "Using " + std::string(SampleConstants::GameName);
+	FDebugLog::Log(L"[EOS SDK] Setting initial presence rich text: %ls", FStringUtils::Widen(RichTextStr).c_str());
 	SetPresenceRichText(GetCurrentUser(), RichTextStr);
 }

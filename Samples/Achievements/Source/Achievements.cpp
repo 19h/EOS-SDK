@@ -866,7 +866,19 @@ void FAchievements::IngestStat(const std::wstring& StatName, int Amount)
 	PlayerPtr Player = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser());
 	if (Player == nullptr)
 	{
-		FDebugLog::LogError(L"Achievements - IngestStats: Current player is invalid!");
+		FDebugLog::LogError(L"Achievements - IngestStat: Current player is invalid!");
+		return;
+	}
+
+	if (StatName.empty())
+	{
+		FDebugLog::LogError(L"Achievements - IngestStat: Stat Name is empty");
+		return;
+	}
+
+	if (Amount <= 0)
+	{
+		FDebugLog::LogError(L"Achievements - IngestStat: Amount is invalid");
 		return;
 	}
 
@@ -874,6 +886,53 @@ void FAchievements::IngestStat(const std::wstring& StatName, int Amount)
 	StatsIngestOptions.ApiVersion = EOS_STATS_INGESTSTAT_API_LATEST;
 	StatsIngestOptions.LocalUserId = Player->GetProductUserID();
 	StatsIngestOptions.TargetUserId = Player->GetProductUserID();
+	StatsIngestOptions.StatsCount = 1;
+
+	EOS_Stats_IngestData* IngestData = new EOS_Stats_IngestData[StatsIngestOptions.StatsCount];
+
+	IngestData[0].ApiVersion = EOS_STATS_INGESTDATA_API_LATEST;
+	std::string Name = FStringUtils::Narrow(StatName);
+	IngestData[0].StatName = Name.c_str();
+	IngestData[0].IngestAmount = Amount;
+
+	StatsIngestOptions.Stats = IngestData;
+
+	EOS_Stats_IngestStat(StatsHandle, &StatsIngestOptions, nullptr, StatsIngestCallbackFn);
+
+	delete[] IngestData;
+}
+
+void FAchievements::IngestStat(const std::wstring& StatName, int Amount, FProductUserId TargetUserId)
+{
+	PlayerPtr Player = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser());
+	if (Player == nullptr)
+	{
+		FDebugLog::LogError(L"Achievements - IngestStat: Current player is invalid!");
+		return;
+	}
+
+	if (!TargetUserId.IsValid())
+	{
+		FDebugLog::LogError(L"Achievements - IngestStat: Target player is invalid!");
+		return;
+	}
+
+	if (StatName.empty())
+	{
+		FDebugLog::LogError(L"Achievements - IngestStat: Stat Name is empty");
+		return;
+	}
+
+	if (Amount <= 0)
+	{
+		FDebugLog::LogError(L"Achievements - IngestStat: Amount is invalid");
+		return;
+	}
+
+	EOS_Stats_IngestStatOptions StatsIngestOptions = {};
+	StatsIngestOptions.ApiVersion = EOS_STATS_INGESTSTAT_API_LATEST;
+	StatsIngestOptions.LocalUserId = Player->GetProductUserID();
+	StatsIngestOptions.TargetUserId = TargetUserId;
 	StatsIngestOptions.StatsCount = 1;
 
 	EOS_Stats_IngestData* IngestData = new EOS_Stats_IngestData[StatsIngestOptions.StatsCount];

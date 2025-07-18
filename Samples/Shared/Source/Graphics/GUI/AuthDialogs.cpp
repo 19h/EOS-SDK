@@ -44,11 +44,9 @@ FAuthDialogs::FAuthDialogs(DialogPtr Parent,
 #ifdef DEV_BUILD
 		FLoginMethodButtonData(L"Password", ELoginMode::IDPassword),
 		FLoginMethodButtonData(L"Exchange", ELoginMode::ExchangeCode),
-		FLoginMethodButtonData(L"Device Code", ELoginMode::DeviceCode),
 		FLoginMethodButtonData(L"Dev Auth", ELoginMode::DevAuth),
 		FLoginMethodButtonData(L"Account Portal", ELoginMode::AccountPortal)
 #else
-		FLoginMethodButtonData(L"Device Code", ELoginMode::DeviceCode),
 		FLoginMethodButtonData(L"Dev Auth", ELoginMode::DevAuth),
 		FLoginMethodButtonData(L"Account Portal", ELoginMode::AccountPortal)
 #endif
@@ -167,11 +165,9 @@ void FAuthDialogs::Create()
 
 	CreateLoginIDPasswordDialog();
 	CreateLoginExchangeCodeDialog();
-	CreateLoginDeviceCodeDialog();
 	CreateLoginDevAuthDialog();
 	CreateLoginAccountPortalDialog();
 
-	CreateDeviceCodeCancelLoginDialog();
 	CreateMFALoginDialog();
 
 	CreateUserLoggedIn();
@@ -231,10 +227,8 @@ void FAuthDialogs::UpdateLayout()
 {
 	UpdateLoginIDPasswordDialog();
 	UpdateLoginExchangeCodeDialog();
-	UpdateLoginDeviceCodeDialog();
 	UpdateLoginDevAuthDialog();
 	UpdateLoginAccountPortalDialog();
-	UpdateDeviceCodeCancelLoginDialog();
 	UpdateMFALoginDialog();
 	UpdateUserLoggedIn();
 }
@@ -581,144 +575,6 @@ void FAuthDialogs::UpdateLoginExchangeCodeDialog()
 	}
 }
 
-void FAuthDialogs::CreateLoginDeviceCodeDialog()
-{
-	LoginDeviceCodeDialog = std::make_shared<FDialog>(Vector2(50, 50), Vector2(650, 700), ParentDialog->GetLayer() - 1);
-
-	float PosX = 20.f;
-
-	std::shared_ptr<FTextLabelWidget> LoginLabel = std::make_shared<FTextLabelWidget>(
-		Vector2(PosX + 40.f, 10.f),
-		Vector2(170.f, 30.f),
-		LoginDeviceCodeDialog->GetLayer() - 1,
-		L"Log in to access " + LoginText + L".",
-		L"");
-	LoginLabel->Create();
-	LoginLabel->SetFont(BoldSmallFont);
-
-	std::shared_ptr<FTextLabelWidget> AuthLabel = std::make_shared<FTextLabelWidget>(
-		Vector2(PosX - 50.f, 50.f),
-		Vector2(70.f, 30.f),
-		LoginDeviceCodeDialog->GetLayer() - 1,
-		L"Device Code",
-		L"");
-	AuthLabel->Create();
-	AuthLabel->SetFont(BoldSmallFont);
-
-	std::shared_ptr<FTextLabelWidget> AuthLabel2 = std::make_shared<FTextLabelWidget>(
-		Vector2(PosX - 50.f, 70.f),
-		Vector2(180.f, 30.f),
-		LoginDeviceCodeDialog->GetLayer() - 1,
-		L"A device code will be requested",
-		L"");
-	AuthLabel2->Create();
-	AuthLabel2->SetFont(TinyFont);
-
-	std::shared_ptr<FTextLabelWidget> AuthLabel3 = std::make_shared<FTextLabelWidget>(
-		Vector2(PosX - 50.f, 70.f),
-		Vector2(100.f, 30.f),
-		LoginDeviceCodeDialog->GetLayer() - 1,
-		L"via another device.",
-		L"");
-	AuthLabel3->Create();
-	AuthLabel3->SetFont(TinyFont);
-
-	std::shared_ptr<FButtonWidget> AuthButton = std::make_shared<FButtonWidget>(
-		Vector2(PosX, 170.f),
-		Vector2(100.f, 30.f),
-		LoginDeviceCodeDialog->GetLayer() - 1,
-		L"LOG IN",
-		assets::DefaultButtonAssets,
-		BoldSmallFont,
-		AuthButtonBackCol);
-	AuthButton->Create();
-	AuthButton->SetOnPressedCallback([this]()
-	{
-		if (IsDialogReadyForInput())
-		{
-			FGameEvent Event(EGameEventType::StartUserLogin, (int)ELoginMode::DeviceCode, L"", L"");
-			FGame::Get().OnGameEvent(Event);
-		}
-	});
-	AuthButton->SetBackgroundColors(assets::DefaultButtonColors);
-
-	std::shared_ptr<FButtonWidget> CancelButton = std::make_shared<FButtonWidget>(
-		Vector2(0.f, 40.f),
-		Vector2(80.f, 25.f),
-		LoginDeviceCodeDialog->GetLayer() - 1,
-		L"CANCEL",
-		assets::DefaultButtonAssets,
-		SmallFont,
-		AuthButtonBackCol);
-	CancelButton->Create();
-	CancelButton->SetOnPressedCallback([this]()
-	{
-		if (IsDialogReadyForInput())
-		{
-			FGameEvent Event(EGameEventType::CancelLogin);
-			FGame::Get().OnGameEvent(Event);
-		}
-	});
-	CancelButton->SetBackgroundColors(assets::DefaultButtonColors);
-
-	LoginDeviceCodeDialog->AddWidget(LoginLabel);
-	LoginDeviceCodeDialog->AddWidget(AuthLabel);
-	LoginDeviceCodeDialog->AddWidget(AuthLabel2);
-	LoginDeviceCodeDialog->AddWidget(AuthLabel3);
-	LoginDeviceCodeDialog->AddWidget(AuthButton);
-	LoginDeviceCodeDialog->AddWidget(CancelButton);
-
-	CreateLoginMethodWidgets(LoginDeviceCodeDialog, ELoginMode::DeviceCode, PosX);
-
-	AddDialog(LoginDeviceCodeDialog);
-}
-
-void FAuthDialogs::UpdateLoginDeviceCodeDialog()
-{
-	if (LoginDeviceCodeDialog && ParentDialog)
-	{
-		Vector2 ParentPos = ParentDialog->GetPosition();
-		Vector2 ParentSize = ParentDialog->GetSize();
-
-		LoginDeviceCodeDialog->SetPosition(ParentPos);
-		LoginDeviceCodeDialog->SetSize(ParentSize);
-
-		float PosX = 0.f;
-		float PosY = 80.f;
-		float SizeX = ParentSize.x;
-		float SizeY = ParentSize.y;
-
-		WidgetPtr LoginLabel = LoginDeviceCodeDialog->GetWidget(0);
-		float LLPosX = PosX + ((SizeX / 2.f) - (LoginLabel->GetSize().x / 2.f)) + 5.f;
-		LoginLabel->SetPosition(Vector2(LLPosX, PosY) + ParentPos);
-
-		WidgetPtr AuthLabel1 = LoginDeviceCodeDialog->GetWidget(1);
-		float AL1PosX = PosX + ((SizeX / 2.f) - (AuthLabel1->GetSize().x / 2.f)) + 5.f;
-		AuthLabel1->SetPosition(Vector2(AL1PosX, PosY + 100.f) + ParentPos);
-
-		WidgetPtr AuthLabel2 = LoginDeviceCodeDialog->GetWidget(2);
-		float AL2PosX = PosX + ((SizeX / 2.f) - (AuthLabel2->GetSize().x / 2.f));
-		AuthLabel2->SetPosition(Vector2(AL2PosX, PosY + 120.f) + ParentPos);
-
-		WidgetPtr AuthLabel3 = LoginDeviceCodeDialog->GetWidget(3);
-		float AL3PosX = PosX + ((SizeX / 2.f) - (AuthLabel3->GetSize().x / 2.f));
-		AuthLabel3->SetPosition(Vector2(AL3PosX, PosY + 135.f) + ParentPos);
-
-		WidgetPtr AuthButton = LoginDeviceCodeDialog->GetWidget(4);
-		float ABPosX = PosX + (SizeX / 2.f) - (AuthButton->GetSize().x / 2.f);
-		AuthButton->SetPosition(Vector2(ABPosX, SizeY - AuthButton->GetSize().y - (SizeY * 0.025f)) + ParentPos);
-
-		WidgetPtr CancelButton = LoginDeviceCodeDialog->GetWidget(5);
-		float CNPosX = PosX + (SizeX / 2.f) - (CancelButton->GetSize().x / 2.f);
-		CancelButton->SetPosition(Vector2(CNPosX, SizeY - CancelButton->GetSize().y - 60.f) + ParentPos);
-		if (FPlayerManager::Get().GetNumPlayers() > 0) CancelButton->Show(); else CancelButton->Hide();
-
-		UpdateLoginMethodButtons(LoginDeviceCodeDialog);
-
-		LoginDeviceCodeDialog->SetPosition(ParentPos);
-	}
-}
-
 void FAuthDialogs::CreateLoginDevAuthDialog()
 {
 	float PosX = 10.f;
@@ -747,7 +603,7 @@ void FAuthDialogs::CreateLoginDevAuthDialog()
 	std::shared_ptr<FTextLabelWidget> AuthHintLabel = std::make_shared<FTextLabelWidget>(
 		Vector2(PosX - 50.f, 60.f),
 		Vector2(SizeX, 30.f),
-		LoginDeviceCodeDialog->GetLayer() - 1,
+		ParentDialog->GetLayer() - 1,
 		L"Specify DevAuthTool location and the name.",
 		L"");
 	AuthHintLabel->Create();
@@ -911,7 +767,7 @@ void FAuthDialogs::CreateLoginAccountPortalDialog()
 	std::shared_ptr<FTextLabelWidget> AuthLabel3 = std::make_shared<FTextLabelWidget>(
 		Vector2(PosX - 50.f, 70.f),
 		Vector2(100.f, 30.f),
-		LoginDeviceCodeDialog->GetLayer() - 1,
+		LoginAccountPortalDialog->GetLayer() - 1,
 		L"",
 		L"");
 	AuthLabel3->Create();
@@ -1111,103 +967,6 @@ void FAuthDialogs::UpdateLoginMethodButtons(DialogPtr LoginDialog)
 			MethodButton->SetSize(Size);
 			MethodButton->SetPosition(Vector2(ButtonPosX, PosY) + ParentPos);
 		}
-	}
-}
-
-void FAuthDialogs::CreateDeviceCodeCancelLoginDialog()
-{
-	DeviceCodeCancelLoginDialog = std::make_shared<FDialog>(Vector2(50, 50), Vector2(650, 700), ParentDialog->GetLayer() - 1);
-
-	float PosX = 20.f;
-
-	std::shared_ptr<FTextLabelWidget> LoginLabel = std::make_shared<FTextLabelWidget>(
-		Vector2(PosX + 40.f, 10.f),
-		Vector2(170.f, 30.f),
-		DeviceCodeCancelLoginDialog->GetLayer() - 1,
-		L"Log in to access " + LoginText + L".",
-		L"");
-	LoginLabel->Create();
-	LoginLabel->SetFont(BoldSmallFont);
-
-	std::shared_ptr<FTextLabelWidget> AuthLabel = std::make_shared<FTextLabelWidget>(
-		Vector2(PosX - 50.f, 50.f),
-		Vector2(180.f, 30.f),
-		DeviceCodeCancelLoginDialog->GetLayer() - 1,
-		L"Waiting for pin to be entered...",
-		L"");
-	AuthLabel->Create();
-	AuthLabel->SetFont(BoldSmallFont);
-
-	std::shared_ptr<FTextLabelWidget> AuthLabel2 = std::make_shared<FTextLabelWidget>(
-		Vector2(PosX - 50.f, 70.f),
-		Vector2(170.f, 30.f),
-		DeviceCodeCancelLoginDialog->GetLayer() - 1,
-		L"Use the button below to cancel.",
-		L"");
-	AuthLabel2->Create();
-	AuthLabel2->SetFont(BoldSmallFont);
-
-	std::shared_ptr<FButtonWidget> AuthButton = std::make_shared<FButtonWidget>(
-		Vector2(PosX, 120.f),
-		Vector2(100.f, 30.f),
-		DeviceCodeCancelLoginDialog->GetLayer() - 1,
-		L"CANCEL",
-		assets::DefaultButtonAssets,
-		BoldSmallFont,
-		AuthButtonBackCol);
-	AuthButton->Create();
-	AuthButton->SetOnPressedCallback([this]()
-	{
-		if (IsDialogReadyForInput())
-		{
-			FGameEvent Event(EGameEventType::UserLoginDeviceCodeCancel, FPlayerManager::Get().GetCurrentUser());
-			FGame::Get().OnGameEvent(Event);
-		}
-	});
-	AuthButton->SetBackgroundColors(assets::DefaultButtonColors);
-
-	DeviceCodeCancelLoginDialog->AddWidget(LoginLabel);
-	DeviceCodeCancelLoginDialog->AddWidget(AuthLabel);
-	DeviceCodeCancelLoginDialog->AddWidget(AuthLabel2);
-	DeviceCodeCancelLoginDialog->AddWidget(AuthButton);
-
-	AddDialog(DeviceCodeCancelLoginDialog);
-
-	HideDialog(DeviceCodeCancelLoginDialog);
-}
-
-void FAuthDialogs::UpdateDeviceCodeCancelLoginDialog()
-{
-	if (DeviceCodeCancelLoginDialog && ParentDialog)
-	{
-		Vector2 ParentPos = ParentDialog->GetPosition();
-		Vector2 ParentSize = ParentDialog->GetSize();
-
-		DeviceCodeCancelLoginDialog->SetPosition(ParentPos);
-		DeviceCodeCancelLoginDialog->SetSize(ParentSize);
-
-		float PosX = 0.f;
-		float PosY = 80.f;
-		float SizeX = ParentSize.x;
-		float SizeY = ParentSize.y;
-
-		WidgetPtr LoginLabel = DeviceCodeCancelLoginDialog->GetWidget(0);
-		float LLPosX = PosX + ((SizeX / 2.f) - (LoginLabel->GetSize().x / 2.f)) + 5.f;
-		LoginLabel->SetPosition(Vector2(LLPosX, PosY) + ParentPos);
-
-		WidgetPtr AuthLabel1 = DeviceCodeCancelLoginDialog->GetWidget(1);
-		float AL1PosX = PosX + ((SizeX / 2.f) - (AuthLabel1->GetSize().x / 2.f)) + 5.f;
-		AuthLabel1->SetPosition(Vector2(AL1PosX, PosY + 100.f) + ParentPos);
-
-		WidgetPtr AuthLabel2 = DeviceCodeCancelLoginDialog->GetWidget(2);
-		float AL2PosX = PosX + ((SizeX / 2.f) - (AuthLabel2->GetSize().x / 2.f)) + 5.f;
-		AuthLabel2->SetPosition(Vector2(AL2PosX, PosY + 120.f) + ParentPos);
-
-		WidgetPtr AuthButton = DeviceCodeCancelLoginDialog->GetWidget(3);
-		float ABPosX = PosX + (SizeX / 2.f) - (AuthButton->GetSize().x / 2.f);
-		AuthButton->SetPosition(Vector2(ABPosX, SizeY - AuthButton->GetSize().y - (SizeY * 0.025f)) + ParentPos);
-
-		DeviceCodeCancelLoginDialog->SetPosition(ParentPos);
 	}
 }
 
@@ -1521,7 +1280,6 @@ void FAuthDialogs::DoChangeLoginMode(ELoginMode LoginMode)
 {
 	HideLoginDialogs();
 
-	HideDialog(DeviceCodeCancelLoginDialog);
 	HideDialog(MFALoginDialog);
 
 	switch (LoginMode)
@@ -1541,15 +1299,6 @@ void FAuthDialogs::DoChangeLoginMode(ELoginMode LoginMode)
 			{
 				ShowDialog(LoginExchangeCodeDialog);
 				UpdateLoginExchangeCodeDialog();
-			}
-			break;
-		}
-		case ELoginMode::DeviceCode:
-		{
-			if (LoginDeviceCodeDialog)
-			{
-				ShowDialog(LoginDeviceCodeDialog);
-				UpdateLoginDeviceCodeDialog();
 			}
 			break;
 		}
@@ -1623,16 +1372,6 @@ void FAuthDialogs::UpdateLoginButtonsState()
 		UpdateLoginButtonState(LoginExchangeCodeDialog->GetWidget(10));
 	}
 
-	if (LoginDeviceCodeDialog)
-	{
-		UpdateLoginButtonState(LoginDeviceCodeDialog->GetWidget(4));
-		UpdateLoginButtonState(LoginDeviceCodeDialog->GetWidget(6));
-		UpdateLoginButtonState(LoginDeviceCodeDialog->GetWidget(7));
-		UpdateLoginButtonState(LoginDeviceCodeDialog->GetWidget(8));
-		UpdateLoginButtonState(LoginDeviceCodeDialog->GetWidget(9));
-		UpdateLoginButtonState(LoginDeviceCodeDialog->GetWidget(10));
-	}
-
 	if (LoginDevAuthDialog)
 	{
 		UpdateLoginButtonState(LoginDevAuthDialog->GetWidget(4));
@@ -1680,7 +1419,6 @@ void FAuthDialogs::EnableLoginButtons(bool bEnable)
 {
 	if (LoginIDPasswordDialog) EnableButton(LoginIDPasswordDialog->GetWidget(4), bEnable);
 	if (LoginExchangeCodeDialog) EnableButton(LoginExchangeCodeDialog->GetWidget(4), bEnable);
-	if (LoginDeviceCodeDialog) EnableButton(LoginDeviceCodeDialog->GetWidget(4), bEnable);
 	if (LoginDevAuthDialog) EnableButton(LoginDevAuthDialog->GetWidget(4), bEnable);
 	if (LoginAccountPortalDialog) EnableButton(LoginAccountPortalDialog->GetWidget(4), bEnable);
 }
@@ -1703,15 +1441,6 @@ void FAuthDialogs::EnableLoginMethodButtons(bool bEnable)
 		EnableButton(LoginExchangeCodeDialog->GetWidget(8), bEnable);
 		EnableButton(LoginExchangeCodeDialog->GetWidget(9), bEnable);
 		EnableButton(LoginExchangeCodeDialog->GetWidget(10), bEnable);
-	}
-
-	if (LoginDeviceCodeDialog)
-	{
-		EnableButton(LoginDeviceCodeDialog->GetWidget(6), bEnable);
-		EnableButton(LoginDeviceCodeDialog->GetWidget(7), bEnable);
-		EnableButton(LoginDeviceCodeDialog->GetWidget(8), bEnable);
-		EnableButton(LoginDeviceCodeDialog->GetWidget(9), bEnable);
-		EnableButton(LoginDeviceCodeDialog->GetWidget(10), bEnable);
 	}
 
 	if (LoginDevAuthDialog)
@@ -1770,12 +1499,6 @@ void FAuthDialogs::OnGameEvent(const FGameEvent& Event)
 		{
 			DoChangeLoginMode(SavedLoginMode);
 		}
-	}
-	else if (Event.GetType() == EGameEventType::UserLoginDeviceCodeCancel)
-	{
-		HideDialog(DeviceCodeCancelLoginDialog);
-
-		DoChangeLoginMode(SavedLoginMode);
 	}
 	else if (Event.GetType() == EGameEventType::UserLoginRequiresMFA)
 	{
@@ -1860,7 +1583,6 @@ void FAuthDialogs::HideLoginDialogs()
 {
 	HideDialog(LoginIDPasswordDialog);
 	HideDialog(LoginExchangeCodeDialog);
-	HideDialog(LoginDeviceCodeDialog);
 	HideDialog(LoginDevAuthDialog);
 	HideDialog(LoginAccountPortalDialog);
 }

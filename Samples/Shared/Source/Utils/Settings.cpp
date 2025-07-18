@@ -17,6 +17,7 @@ namespace
 constexpr wchar_t SettingsConstants::DevAuthHost[];
 constexpr wchar_t SettingsConstants::DevAuthCred[];
 constexpr wchar_t SettingsConstants::AutoLogin[];
+constexpr wchar_t SettingsConstants::PostLoginCommand[];
 
 
 /**
@@ -118,7 +119,7 @@ public:
 
 private:
 	/** Entry type */
-	FSettings::SettingsEntryType Type;
+	FSettings::SettingsEntryType Type = FSettings::SettingsEntryType::None;
 
 	/** Entry values */
 	int IntVal;					// SettingsEntryType::Integer
@@ -472,27 +473,28 @@ bool FSettings::WriteFile()
 		FSettingsEntryPtr Entry = Itr->second;
 		if (!TagStr.empty() && Entry)
 		{
-			WCHAR Buf[64];
+			const size_t BufSize = 64;
+			WCHAR Buf[BufSize];
 			switch (Entry->GetType())
 			{
 				case SettingsEntryType::Integer:
 				{
-					swprintf(Buf, sizeof(Buf), L"%ls=%d\n", TagStr.c_str(), Entry->GetAsInt());
+					swprintf(Buf, BufSize, L"%ls=%d\n", TagStr.c_str(), Entry->GetAsInt());
 					break;
 				}
 				case SettingsEntryType::Float:
 				{
-					swprintf(Buf, sizeof(Buf), L"%ls=%f\n", TagStr.c_str(), Entry->GetAsFloat());
+					swprintf(Buf, BufSize, L"%ls=%f\n", TagStr.c_str(), Entry->GetAsFloat());
 					break;
 				}
 				case SettingsEntryType::String:
 				{
-					swprintf(Buf, sizeof(Buf), L"%ls=\"%ls\"\n", TagStr.c_str(), Entry->GetAsString().c_str());
+					swprintf(Buf, BufSize, L"%ls=\"%ls\"\n", TagStr.c_str(), Entry->GetAsString().c_str());
 					break;
 				}
 				case SettingsEntryType::Boolean:
 				{
-					swprintf(Buf, sizeof(Buf), L"%ls=%ls\n", TagStr.c_str(), Entry->GetAsBool() ? L"true" : L"false");
+					swprintf(Buf, BufSize, L"%ls=%ls\n", TagStr.c_str(), Entry->GetAsBool() ? L"true" : L"false");
 					break;
 				}
 				default:

@@ -10,7 +10,7 @@
 #include "GameEvent.h"
 #include "Utils/Utils.h"
 
-#if ALLOW_RESERVED_PLATFORM_OPTIONS
+#if ALLOW_RESERVED_OPTIONS
 #include "ReservedPlatformOptions.h"
 #endif
 
@@ -62,22 +62,33 @@ bool FPlatform::Create()
 	{
 		ProductId = FStringUtils::Narrow(CmdProductID).c_str();
 	}
-	bHasInvalidParamProductId = ProductId.empty() ? true : false;
+	bHasInvalidParamProductId = ProductId.empty();
+	if (bHasInvalidParamProductId)
+	{
+		FDebugLog::LogError(L"[EOS SDK] Product Id is empty, add your product id from Epic Games DevPortal to SampleConstants");
+	}
 
-	bHasInvalidParamSandboxId = false;
 	std::wstring CmdSandboxID = FCommandLine::Get().GetParamValue(CommandLineConstants::SandboxId);
 	if (!CmdSandboxID.empty())
 	{
 		SandboxId = FStringUtils::Narrow(CmdSandboxID).c_str();
 	}
-	bHasInvalidParamSandboxId = SandboxId.empty() ? true : false;
+	bHasInvalidParamSandboxId = SandboxId.empty();
+	if (bHasInvalidParamSandboxId)
+	{
+		FDebugLog::LogError(L"[EOS SDK] Sandbox Id is empty, add your sandbox id from Epic Games DevPortal to SampleConstants");
+	}
 
 	std::wstring CmdDeploymentID = FCommandLine::Get().GetParamValue(CommandLineConstants::DeploymentId);
 	if (!CmdDeploymentID.empty())
 	{
 		DeploymentId = FStringUtils::Narrow(CmdDeploymentID).c_str();
 	}
-	bHasInvalidParamDeploymentId = DeploymentId.empty() ? true : false;
+	bHasInvalidParamDeploymentId = DeploymentId.empty();
+	if (bHasInvalidParamDeploymentId)
+	{
+		FDebugLog::LogError(L"[EOS SDK] Deployment Id is empty, add your deployment id from Epic Games DevPortal to SampleConstants");
+	}
 
 	PlatformOptions.ProductId = ProductId.c_str();
 	PlatformOptions.SandboxId = SandboxId.c_str();
@@ -107,6 +118,8 @@ bool FPlatform::Create()
 	else if (!ClientId.empty() || !ClientSecret.empty())
 	{
 		bHasInvalidParamClientCreds = true;
+
+		FDebugLog::LogError(L"[EOS SDK] Client credentials are invalid, check clientid and clientsecret in SampleConstants");
 	}
 	else
 	{
@@ -124,6 +137,7 @@ bool FPlatform::Create()
 
 	EOS_Platform_RTCOptions RtcOptions = { 0 };
 	RtcOptions.ApiVersion = EOS_PLATFORM_RTCOPTIONS_API_LATEST;
+	RtcOptions.BackgroundMode = EOS_ERTCBackgroundMode::EOS_RTCBM_LeaveRooms;
 
 #ifdef _WIN32
 	// Get absolute path for xaudio2_9redist.dll file
@@ -160,11 +174,11 @@ bool FPlatform::Create()
 		}
 	}
 
-#if ALLOW_RESERVED_PLATFORM_OPTIONS
+#if ALLOW_RESERVED_OPTIONS
 	SetReservedPlatformOptions(PlatformOptions);
 #else
 	PlatformOptions.Reserved = NULL;
-#endif // ALLOW_RESERVED_PLATFORM_OPTIONS
+#endif // ALLOW_RESERVED_OPTIONS
 
 	PlatformHandle = EOS_Platform_Create(&PlatformOptions);
 
@@ -214,22 +228,6 @@ void FPlatform::Update()
 		if (!bHasShownInvalidParamsErrors)
 		{
 			bHasShownInvalidParamsErrors = true;
-			if (bHasInvalidParamProductId)
-			{
-				FDebugLog::LogError(L"[EOS SDK] Product Id is empty, add your product id from Epic Games DevPortal to SampleConstants");
-			}
-			if (bHasInvalidParamSandboxId)
-			{
-				FDebugLog::LogError(L"[EOS SDK] Sandbox Id is empty, add your sandbox id from Epic Games DevPortal to SampleConstants");
-			}
-			if (bHasInvalidParamDeploymentId)
-			{
-				FDebugLog::LogError(L"[EOS SDK] Deployment Id is empty, add your deployment id from Epic Games DevPortal to SampleConstants");
-			}
-			if (bHasInvalidParamClientCreds)
-			{
-				FDebugLog::LogError(L"[EOS SDK] Client credentials are invalid, check clientid and clientsecret in SampleConstants");
-			}
 
 			FGameEvent PopupEvent(EGameEventType::ShowPopupDialog, L"One or more parameters required for EOS_Platform_Create are invalid. Check SampleConstants have been set up correctly.");
 			FGame::Get().OnGameEvent(PopupEvent);

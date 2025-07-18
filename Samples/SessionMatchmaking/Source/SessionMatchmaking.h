@@ -5,6 +5,22 @@
 #include <eos_sdk.h>
 #include <eos_sessions.h>
 
+/**
+ * These values are defined within the SDK in platform specific headers. In this example,
+ * Sessions are created from PC so the values are all redefined here. This is indicative of what
+ * game developers would need to employ for Windows or Linux based dedicated servers that
+ * employ platform restrictions for console clients. There is an NDA concern regarding platform names
+ * but the assumption is that a game developer creating a dedicated server to play with a console 
+ * platform has an NDA in place for that platform.
+ */
+enum class ERestrictedPlatformType
+{
+	Unrestricted = 0,	// Unrestricted - all platforms allowed 
+	PSN = 1000,			// Any Sony platform (PS4 or PS5)
+	Switch = 2000,		// Nintendo (Switch only)
+	XboxLive = 3000		// XSX and XboxOneGDK 
+};
+
 //Simple RAII wrapper to make sure SessionDetails handles are released correctly.
 using SessionDetailsKeeper = std::shared_ptr<struct EOS_SessionDetailsHandle>;
 inline SessionDetailsKeeper MakeSessionDetailsKeeper(EOS_HSessionDetails SessionDetails)
@@ -116,6 +132,7 @@ struct FSession
 	bool bAllowJoinInProgress;
 	bool bPresenceSession = false;
 	bool bInvitesAllowed = true;
+	ERestrictedPlatformType RestrictedPlatform = ERestrictedPlatformType::Unrestricted;
 	EOS_EOnlineSessionPermissionLevel PermissionLevel;
 	ActiveSessionKeeper ActiveSession;
 
@@ -182,25 +199,25 @@ private:
 };
 
 /**
-* Manages game sessions and matchmaking.
-*/
+ * Manages game sessions and matchmaking.
+ */
 class FSessionMatchmaking
 {
 public:
 	/**
-	* Constructor
-	*/
+	 * Constructor
+	 */
 	FSessionMatchmaking() noexcept(false);
 
 	/**
-	* No copying or copy assignment allowed for this class.
-	*/
+	 * No copying or copy assignment allowed for this class.
+	 */
 	FSessionMatchmaking(FSessionMatchmaking const&) = delete;
 	FSessionMatchmaking& operator=(FSessionMatchmaking const&) = delete;
 
 	/**
-	* Destructor
-	*/
+	 * Destructor
+	 */
 	virtual ~FSessionMatchmaking();
 
 	void OnShutdown();
@@ -208,10 +225,10 @@ public:
 	void Update();
 
 	/**
-	* Receives game event
-	*
-	* @param Event - Game event to act on
-	*/
+	 * Receives game event
+	 *
+	 * @param Event - Game event to act on
+	 */
 	void OnGameEvent(const FGameEvent& Event);
 
 	/**
@@ -231,6 +248,10 @@ public:
 	bool HasActiveLocalSessions() const;
 	bool HasPresenceSession() const;
 	bool IsPresenceSession(const std::string& Id) const;
+	/**
+	 * Returns the PresenceSession if available; otherwise returns nullptr
+	 */
+	const FSession* GetPresenceSession() const;
 
 	//Get current local session by name (if exists). Returns invalid session on error/missing.
 	const FSession& GetSession(const std::string& Name);
@@ -242,14 +263,20 @@ public:
 	void Unregister(const std::string& SessionName, EOS_ProductUserId FriendId);
 
 	void InviteToSession(const std::string& Name, FProductUserId FriendProductUserId);
+	void RequestToJoinSession(const FProductUserId& FriendProductUserId);
+	void AcceptRequestToJoin(const FProductUserId& FriendProductUserId);
+	void RejectRequestToJoin(const FProductUserId& FriendProductUserId);
 
 	//Saves session as the current one player is invited to.
 	void SetInviteSession(const FSession& Session, SessionDetailsKeeper SessionHandle);
 	const FSession& GetInviteSession() const { return CurrentInviteSession; }
 	SessionDetailsKeeper GetInviteSessionHandle() const { return CurrentInviteSessionHandle; }
-		
+
 	void SubscribeToGameInvites();
 	void UnsubscribeFromGameInvites();
+
+	void SubscribeToLeaveSessionUI();
+	void UnsubscribeFromLeaveSessionUI();
 		
 	//Search by attributes
 	void Search(const std::vector<FSession::Attribute>& Attributes);
@@ -272,126 +299,168 @@ public:
 	void OnSessionDestroyed(const std::string& SessionName);
 
 	/**
-	* Callback that is fired when we get response regarding session update request.
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired when we get response regarding session update request.
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnUpdateSessionCompleteCallback(const EOS_Sessions_UpdateSessionCallbackInfo* Data);
 
 	/**
-	* Callback that is fired when we get response regarding session create request.
-	* The signature is the same as that used when performing a session update but this
-	* version is used only for a session create.
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired when we get response regarding session create request.
+	 * The signature is the same as that used when performing a session update but this
+	 * version is used only for a session create.
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnUpdateSessionCompleteCallback_ForCreate(const EOS_Sessions_UpdateSessionCallbackInfo* Data);
 
 	/**
-	* Callback that is fired when we get response regarding session start request.
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired when we get response regarding session start request.
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnStartSessionCompleteCallback(const EOS_Sessions_StartSessionCallbackInfo* Data);
 
 	/**
-	* Callback that is fired when we get response regarding session end request.
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired when we get response regarding session end request.
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnEndSessionCompleteCallback(const EOS_Sessions_EndSessionCallbackInfo* Data);
 	
 	/**
-	* Callback that is fired when we get response regarding session destroy request.
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired when we get response regarding session destroy request.
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnDestroySessionCompleteCallback(const EOS_Sessions_DestroySessionCallbackInfo* Data);
 
 	/**
-	* Callback that is fired when we get response regarding session register request.
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired when we get response regarding session register request.
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnRegisterCompleteCallback(const EOS_Sessions_RegisterPlayersCallbackInfo* Data);
 
 	/**
-	* Callback that is fired when we get response regarding session unregister request.
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired when we get response regarding session unregister request.
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnUnregisterCompleteCallback(const EOS_Sessions_UnregisterPlayersCallbackInfo* Data);
 
 	/**
-	* Callback that is fired on search finish
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired on search finish
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnFindSessionsCompleteCallback(const EOS_SessionSearch_FindCallbackInfo* Data);
 
 	/**
-	* Callback that is fired on invite to session sent
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired on invite to session sent
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnSendInviteCompleteCallback(const EOS_Sessions_SendInviteCallbackInfo* Data);
 
 	/**
-	* Callback that is fired on invite to session received
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired on invite to session received
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnSessionInviteReceivedCallback(const EOS_Sessions_SessionInviteReceivedCallbackInfo* Data);
 
 	/**
-	* Callback that is fired on invite to session accepted 
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired on invite to session accepted 
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnSessionInviteAcceptedCallback(const EOS_Sessions_SessionInviteAcceptedCallbackInfo* Data);
 
 	/**
-	* Callback that is fired on join session
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired on invite to session rejected
+	 *
+	 * @param Data - out parameter
+	 */
+	static void EOS_CALL OnSessionInviteRejectedCallback(const EOS_Sessions_SessionInviteRejectedCallbackInfo* Data);
+
+	/**
+	 * Callback that is fired on request to join session sent
+	 *
+	 * @param Data - out parameter
+	 */
+	static void EOS_CALL OnSendRequestToJoinCompleteCallback(const EOS_CustomInvites_SendRequestToJoinCallbackInfo* Data);
+
+	/**
+	 * Callback that is fired after a request to join session is accepted
+	 *
+	 * @param Data - out parameter
+	 */
+	static void EOS_CALL OnSendRequestToJoinAcceptedCallback(const EOS_CustomInvites_AcceptRequestToJoinCallbackInfo* Data);
+
+	/**
+	 * Callback that is fired after a request to join session is rejected 
+	 *
+	 * @param Data - out parameter
+	 */
+	static void EOS_CALL OnSendRequestToJoinRejectedCallback(const EOS_CustomInvites_RejectRequestToJoinCallbackInfo* Data);
+
+	/**
+	 * Callback that is fired when a request to join session is received
+	 *
+	 * @param Data - out parameter
+	 */
+	static void EOS_CALL OnRequestToJoinSessionReceivedCallback(const EOS_CustomInvites_RequestToJoinReceivedCallbackInfo* Data);
+
+	/**
+	 * Callback that is fired on join session
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnJoinSessionCallback(const EOS_Sessions_JoinSessionCallbackInfo* Data);
 
 	/**
-	* Callback that is fired on join game accepted
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired on join game accepted
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnPresenceJoinGameAcceptedCallback(const EOS_Presence_JoinGameAcceptedCallbackInfo* Data);
 
 	/**
-	* Callback that is fired on join game accepted
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired on join game accepted
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnSessionsJoinSessionAcceptedCallback(const EOS_Sessions_JoinSessionAcceptedCallbackInfo* Data);
 
 	/**
-	* Callback that is fired when set presence is completed
-	*
-	* @param Data - out parameter
-	*/
+	 * Callback that is fired when set presence is completed
+	 *
+	 * @param Data - out parameter
+	 */
 	static void EOS_CALL OnSetPresenceCallback(const EOS_Presence_SetPresenceCallbackInfo* Data);
+
+	/**
+	 * Callback that is fired when leave session is requested from UI.
+	 * 
+	 * @param Data - out parameter
+	 */
+	static void EOS_CALL OnLeaveSessionRequestedCallback(const EOS_Sessions_LeaveSessionRequestedCallbackInfo* Data);
 private:
 
 	/**
-	* Called when a user has logged in
-	*/
+	 * Called when a user has logged in
+	 */
 	void OnLoggedIn(FEpicAccountId UserId);
 
 	/**
-	* Called when a user has logged out
-	*/
+	 * Called when a user has logged out
+	 */
 	void OnLoggedOut(FEpicAccountId UserId);
 
 	/**
-	* Called when a user connect has logged in
-	*/
+	 * Called when a user connect has logged in
+	 */
 	void OnUserConnectLoggedIn(FProductUserId ProductUserId);
 
 	void OnSessionUpdateFinished(bool bSuccess, const std::string& Name, const std::string& SessionId, bool bRemoveSessionOnFailure = false);
@@ -424,9 +493,14 @@ private:
 
 	EOS_NotificationId SessionInviteNotificationHandle = EOS_INVALID_NOTIFICATIONID;
 	EOS_NotificationId SessionInviteAcceptedNotificationHandle = EOS_INVALID_NOTIFICATIONID;
+	EOS_NotificationId SessionInviteRejectedNotificationHandle = EOS_INVALID_NOTIFICATIONID;
 	EOS_NotificationId JoinGameNotificationHandle = EOS_INVALID_NOTIFICATIONID;
 	EOS_NotificationId SessionJoinGameNotificationHandle = EOS_INVALID_NOTIFICATIONID;
+	EOS_NotificationId RequestToJoinSessionReceivedNotificationHandle = EOS_INVALID_NOTIFICATIONID;
+	EOS_NotificationId LeaveSessionRequestedNotificationHandle = EOS_INVALID_NOTIFICATIONID;
 
 	SessionDetailsKeeper JoiningSessionDetails = nullptr;
 	size_t JoinedSessionIndex = 0;
+
+	uint32_t RestrictedPlatform;
 };

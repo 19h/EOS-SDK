@@ -105,11 +105,6 @@ private:
 	void CreateLoginExchangeCodeDialog();
 
 	/**
-	 * Creates the widgets for the login with pin grant dialog
-	 */
-	void CreateLoginDeviceCodeDialog();
-
-	/**
 	 * Creates the widgets for the login with dev auth tool credentials dialog
 	 */
 	void CreateLoginDevAuthDialog();
@@ -128,11 +123,6 @@ private:
 	 * Creates the widgets for the user logged in dialog
 	 */
 	void CreateUserLoggedIn();
-
-	/**
-	 * Creates the widgets for the pin grant cancel login dialog
-	 */
-	void CreateDeviceCodeCancelLoginDialog();
 
 	/**
 	 * Creates the widgets for the MFA login dialog
@@ -208,11 +198,6 @@ private:
 	void UpdateLoginExchangeCodeDialog();
 
 	/**
-	 * Updates the login pin grant dialog position and size based on friend dialog
-	 */
-	void UpdateLoginDeviceCodeDialog();
-
-	/**
 	 * Updates the login dev auth dialog position and size based on friend dialog
 	 */
 	void UpdateLoginDevAuthDialog();
@@ -226,11 +211,6 @@ private:
 	 * Updated login method buttons
 	 */
 	void UpdateLoginMethodButtons(DialogPtr LoginDialog);
-
-	/**
-	 * Updates the cancel login pin grant dialog position and size based on friend dialog
-	 */
-	void UpdateDeviceCodeCancelLoginDialog();
 
 	/**
 	 * Updates the MFA login dialog position and size based on friend dialog
@@ -304,9 +284,6 @@ private:
 	/** Login Dialog for Exchange Code login */
 	DialogPtr LoginExchangeCodeDialog;
 
-	/** Login Dialog for Pin Grant login */
-	DialogPtr LoginDeviceCodeDialog;
-
 	/** Login Dialog for Dev Auth login */
 	DialogPtr LoginDevAuthDialog;
 
@@ -315,9 +292,6 @@ private:
 
 	/** User Logged In Dialog */
 	DialogPtr UserLoggedInDialog;
-
-	/** Pin Grant Cancel Login Dialog */
-	DialogPtr DeviceCodeCancelLoginDialog;
 
 	/** MFA Login Dialog */
 	DialogPtr MFALoginDialog;

@@ -26,17 +26,41 @@ FSessionInviteReceivedDialog::FSessionInviteReceivedDialog(Vector2 InPos,
 		Color::Black);
 	AddWidget(Background);
 
-	Label = std::make_shared<FTextLabelWidget>(
+	MessageLabel = std::make_shared<FTextLabelWidget>(
 		Vector2(Position.x + 30.0f, Position.y + 25.0f),
 		Vector2(150.f, 30.f),
 		InLayer - 1,
-		L"Session invite received from: ",
+		L"",
 		L"");
-	Label->SetFont(InNormalFont);
-	AddWidget(Label);
+	MessageLabel->SetFont(InNormalFont);
+	AddWidget(MessageLabel);
+
+	FriendNameLabel = std::make_shared<FTextLabelWidget>(
+		MessageLabel->GetPosition() + Vector2(0.0f, MessageLabel->GetSize().y + 5.0f),
+		Vector2(150.f, 30.f),
+		InLayer - 1,
+		L"",
+		L"",
+		FColor(1.f, 1.f, 1.f, 1.f),
+		FColor(1.f, 1.f, 1.f, 1.f),
+		EAlignmentType::Left);
+	FriendNameLabel->SetFont(InNormalFont);
+	AddWidget(FriendNameLabel);
+
+	LevelNameLabel = std::make_shared<FTextLabelWidget>(
+		FriendNameLabel->GetPosition() + Vector2(0.0f, FriendNameLabel->GetSize().y + 5.0f),
+		Vector2(150.f, 30.f),
+		InLayer - 1,
+		L"",
+		L"",
+		FColor(1.f, 1.f, 1.f, 1.f),
+		FColor(1.f, 1.f, 1.f, 1.f),
+		EAlignmentType::Left);
+	LevelNameLabel->SetFont(InNormalFont);
+	AddWidget(LevelNameLabel);
 
 	PresenceSessionCheckbox = std::make_shared<FCheckboxWidget>(
-		Label->GetPosition() + Vector2(Label->GetSize().x / 2.f + 5.f, Label->GetSize().y + 10.0f),
+		LevelNameLabel->GetPosition() + Vector2(MessageLabel->GetSize().x / 2.f + 5.f, MessageLabel->GetSize().y + 5.0f),
 		Vector2(150.0f, 30.0f),
 		Layer - 1,
 		L"Presence?",
@@ -88,8 +112,10 @@ void FSessionInviteReceivedDialog::SetPosition(Vector2 Pos)
 	IWidget::SetPosition(Pos);
 
 	Background->SetPosition(Position);
-	Label->SetPosition(Position + Vector2(30.0f, 25.0f));
-	PresenceSessionCheckbox->SetPosition(Label->GetPosition() + Vector2(Label->GetSize().x / 2.0f + 5.0f, Label->GetSize().y + 10.0f));
+	MessageLabel->SetPosition(Position + Vector2(30.0f, 25.0f));
+	FriendNameLabel->SetPosition(MessageLabel->GetPosition() + Vector2(5.0f, MessageLabel->GetSize().y + 5.0f));
+	LevelNameLabel->SetPosition(FriendNameLabel->GetPosition() + Vector2(0.0f, FriendNameLabel->GetSize().y + 2.0f));
+	PresenceSessionCheckbox->SetPosition(LevelNameLabel->GetPosition() + Vector2(MessageLabel->GetSize().x / 2.0f + 5.0f, MessageLabel->GetSize().y + 2.0f));
 	AcceptInviteButton->SetPosition(Position + Vector2(GetSize().x / 2.0f - AcceptInviteButton->GetSize().x - 5.0f, GetSize().y - 45.0f));
 	DeclineInviteButton->SetPosition(Position + Vector2(GetSize().x / 2.0f + 5.0f, GetSize().y - 45.0f));
 }
@@ -108,10 +134,28 @@ void FSessionInviteReceivedDialog::SetSessionInfo(const std::wstring& InFriendNa
 		}
 	}
 
-	if (Label)
+	if (MessageLabel)
 	{
-		Label->ClearText();
-		Label->SetText(std::wstring(L"Session invite received from: ") + InFriendName + L" Level: " + LevelName);
+		MessageLabel->ClearText();
+		MessageLabel->SetText(std::wstring(L"Session Invite Received"));
+	}
+
+	if (FriendNameLabel)
+	{
+		FriendNameLabel->ClearText();
+		if (!InFriendName.empty())
+		{
+			FriendNameLabel->SetText(std::wstring(L"Friend: ") + InFriendName);
+		}
+	}
+
+	if (LevelNameLabel)
+	{
+		LevelNameLabel->ClearText();
+		if (!LevelName.empty())
+		{
+			LevelNameLabel->SetText(std::wstring(L"Level: ") + LevelName);
+		}
 	}
 
 	if (FGame::Get().GetSessions()->HasPresenceSession())

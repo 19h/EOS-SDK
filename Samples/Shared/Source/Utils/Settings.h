@@ -21,6 +21,9 @@ struct SettingsConstants
 
 	/** Auto Login (Format: Integer - 0: No Auto Login or 1: Auto Login) */
 	static constexpr wchar_t AutoLogin[] = L"autologin";
+
+	/** Command after login (Format: String, e.g. "findbybucketid 123" */
+	static constexpr wchar_t PostLoginCommand[] = L"postlogincommand";
 };
 
 class FSettingsEntry;

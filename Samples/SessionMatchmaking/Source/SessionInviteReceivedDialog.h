@@ -50,8 +50,14 @@ private:
 	/** Background */
 	WidgetPtr Background;
 
-	/** Label */
-	std::shared_ptr<FTextLabelWidget> Label;
+	/** Message label */
+	std::shared_ptr<FTextLabelWidget> MessageLabel;
+
+	/** Friend name label */
+	std::shared_ptr<FTextLabelWidget> FriendNameLabel;
+
+	/** Level name label */
+	std::shared_ptr<FTextLabelWidget> LevelNameLabel;
 
 	/** Accept invite button */
 	std::shared_ptr<FButtonWidget> AcceptInviteButton;

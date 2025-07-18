@@ -172,7 +172,7 @@
     <ClInclude Include="..\Shared\Source\Graphics\GUI\AssetUtils.h">
       <Filter>SharedSource\Graphics\GUI</Filter>
     </ClInclude>
-	<ClInclude Include="..\Shared\Source\Graphics\GUI\Font.h">
+    <ClInclude Include="..\Shared\Source\Graphics\GUI\Font.h">
       <Filter>SharedSource\Graphics\GUI</Filter>
     </ClInclude>
     <ClInclude Include="..\Shared\Source\Graphics\GUI\Texture.h">
@@ -310,6 +310,9 @@
     <ClInclude Include="..\Shared\Source\BaseMenu.h">
       <Filter>SharedSource</Filter>
     </ClInclude>
+    <ClInclude Include="Source\RequestToJoinSessionReceivedDialog.h">
+      <Filter>Source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="EOSSDK">
@@ -440,7 +443,7 @@
     <ClCompile Include="..\Shared\Source\Graphics\GUI\AssetUtils.cpp">
       <Filter>SharedSource\Graphics\GUI</Filter>
     </ClCompile>
-	<ClCompile Include="..\Shared\Source\Graphics\GUI\Font.cpp">
+    <ClCompile Include="..\Shared\Source\Graphics\GUI\Font.cpp">
       <Filter>SharedSource\Graphics\GUI</Filter>
     </ClCompile>
     <ClCompile Include="..\Shared\Source\Graphics\GUI\Texture.cpp">
@@ -547,6 +550,9 @@
     </ClCompile>
     <ClCompile Include="..\Shared\Source\BaseMenu.cpp">
       <Filter>SharedSource</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\RequestToJoinSessionReceivedDialog.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

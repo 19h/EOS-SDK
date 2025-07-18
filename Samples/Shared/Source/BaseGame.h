@@ -3,8 +3,8 @@
 #pragma once
 
 /**
-* Forward class declarations
-*/
+ * Forward class declarations
+ */
 class FGameEvent;
 class FInput;
 class FConsole;
@@ -20,155 +20,155 @@ class FVectorRender;
 class FTextureManager;
 
 /**
-* Main game class
-*/
+ * Main game class
+ */
 class FBaseGame
 {
 public:
 	/**
-	* Constructor
-	*/
+	 * Constructor
+	 */
 	FBaseGame() noexcept(false);
 
 	/**
-	* No copying or copy assignment allowed for this class.
-	*/
+	 * No copying or copy assignment allowed for this class.
+	 */
 	FBaseGame(FBaseGame const&) = delete;
 	FBaseGame& operator=(FBaseGame const&) = delete;
 
 	/**
-	* Destructor
-	*/
+	 * Destructor
+	 */
 	virtual ~FBaseGame();
 
 	/**
-	* Initialization
-	*/
+	 * Initialization
+	 */
 	virtual void Init();
 
 	/**
-	* Exit Game
-	*/
+	 * Exit Game
+	 */
 	void Exit();
 
 	/**
-	* Main update game loop
-	*/
+	 * Main update game loop
+	 */
 	virtual void Update();
 
 	/**
-	* Render pass-through
-	*/
+	 * Render pass-through
+	 */
 	virtual void Render();
 
 	/**
-	* Create Resources
-	*/
+	 * Create Resources
+	 */
 	virtual void Create();
 
 	/**
-	* Game event dispatcher
-	*
-	* @param Event - Game event to be dispatched
-	*/
+	 * Game event dispatcher
+	 *
+	 * @param Event - Game event to be dispatched
+	 */
 	virtual void OnGameEvent(const FGameEvent& Event);
 
 	/**
-	* Called just before shutting down the game. Allows to finish current operations.
-	*/
+	 * Called just before shutting down the game. Allows to finish current operations.
+	 */
 	virtual void OnShutdown();
 
 	/**
-	* Called in the process of shutdown. Shutdown is delayed until this function returns false.
-	* This allows to finish and cleanup something before shutting down.
-	*/
+	 * Called in the process of shutdown. Shutdown is delayed until this function returns false.
+	 * This allows to finish and cleanup something before shutting down.
+	 */
 	virtual bool IsShutdownDelayed();
 
 	/**
-	* Updates layout of UI elements
-	*/
+	 * Updates layout of UI elements
+	 */
 	virtual void UpdateLayout(int Width, int Height);
 
 	/**
-	* Singleton's getter
-	*/
+	 * Singleton's getter
+	 */
 	static FBaseGame& GetBase();
-		
+
 	/**
-	* Accessor for Friends
-	*/
+	 * Accessor for Authentication
+	 */
+	const std::shared_ptr<FAuthentication>& GetAuthentication();
+
+	/**
+	 * Accessor for Friends
+	 */
 	const std::unique_ptr<FFriends>& GetFriends();
 
 	/**
-	* Accessor for EosUI
-	*/
+	 * Accessor for EosUI
+	 */
 	const std::unique_ptr<FEosUI>& GetEosUI();
 
 	/**
-	* Accessor for User
-	*/
+	 * Accessor for User
+	 */
 	const std::unique_ptr<FUsers>& GetUsers();
 
 	/**
-	* Accessor for Input
-	*/
+	 * Accessor for Input
+	 */
 	const std::unique_ptr<FInput>& GetInput();
 
 	/**
-	* Accessor for Console
-	*/
+	 * Accessor for Console
+	 */
 	const std::shared_ptr<FConsole>& GetConsole();
 
 	/**
-	* Accessor for Menu
-	*/
+	 * Accessor for Menu
+	 */
 	const std::shared_ptr<FBaseMenu>& GetMenu();
 
-	/** 
+	/**
 	 * Accessor for Texture Manager
- 	 */
+	 */
 	const std::unique_ptr<FTextureManager>& GetTextureManager();
 
 	/**
-	* Accessor for Vector Render
-	*/
+	 * Accessor for Vector Render
+	 */
 	const std::unique_ptr<FVectorRender>& GetVectorRender();
 
 	/**
-	* Utility for printing a message to the in-game console
-	*
-	* @param Msg - A string representing the message to print out
-	*/
+	 * Utility for printing a message to the in-game console
+	 *
+	 * @param Msg - A string representing the message to print out
+	 */
 	void PrintToConsole(const std::wstring& Msg);
 
 	/**
-	* Utility for printing a warning message to the in-game console
-	*
-	* @param Msg - A string representing the message to print out
-	*/
+	 * Utility for printing a warning message to the in-game console
+	 *
+	 * @param Msg - A string representing the message to print out
+	 */
 	void PrintWarningToConsole(const std::wstring& Msg);
 
 	/**
-	* Utility for printing an error message to the in-game console
-	*
-	* @param Msg - A string representing the message to print out
-	*/
+	 * Utility for printing an error message to the in-game console
+	 *
+	 * @param Msg - A string representing the message to print out
+	 */
 	void PrintErrorToConsole(const std::wstring& Msg);
-
-	/**
-	* Toggle rendering of fps label
-	*/
-	void ToggleFPS();
 
 protected:
 	/**
-	* Creates all console commands
-	*/
+	 * Creates all console commands
+	 */
 	virtual void CreateConsoleCommands();
 
-	/** 
-	 * Appends extra help message lines (to be used in 'help' console command)
-	 */
+	/**
+	  * Appends extra help message lines (to be used in 'help' console command)
+	  */
 	void AppendHelpMessageLines(const std::vector<const wchar_t*>& MoreLines);
 
 	/**

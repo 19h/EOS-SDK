@@ -15,6 +15,28 @@
 static const float NewSessionDialogUIElementsXOffset = 20.0f;
 static const float NewSessionDialogUIElementsYOffset = 20.0f;
 
+const std::wstring PSNRestrictedPlatformString = L"PSN";
+const std::wstring SwitchRestrictedPlatformString = L"Switch";
+const std::wstring XboxLiveRestrictedPlatformString = L"XboxLive";
+
+static ERestrictedPlatformType RestrictedPlatformTypeForString(const std::wstring& RestrictedPlatformString)
+{
+	if (RestrictedPlatformString == PSNRestrictedPlatformString)
+	{
+		return ERestrictedPlatformType::PSN;
+	}
+	else if (RestrictedPlatformString == SwitchRestrictedPlatformString)
+	{
+		return ERestrictedPlatformType::Switch;
+	}
+	else if (RestrictedPlatformString == XboxLiveRestrictedPlatformString)
+	{
+		return ERestrictedPlatformType::XboxLive;
+	}
+
+	return ERestrictedPlatformType::Unrestricted;
+}
+
 FNewSessionDialog::FNewSessionDialog(Vector2 InPos,
 	Vector2 InSize,
 	UILayer InLayer,
@@ -76,6 +98,23 @@ FNewSessionDialog::FNewSessionDialog(Vector2 InPos,
 	});
 	//AddWidget(SessionLevelDropDown);
 
+	RestrictedPlatformsDropDown = std::make_shared<FDropDownList>(
+		SessionLevelDropDown->GetPosition() + Vector2(DropDownListsSize.x  + 10.0f, 0.0f),
+		DropDownListsSize + Vector2(65.0f, 0.0f),
+		DropDownListsSize + Vector2(65.0f, 85.0),
+		Layer - 1,
+		L"Allowed Platform: ",
+		std::vector<std::wstring>({ L"Unrestricted", PSNRestrictedPlatformString, SwitchRestrictedPlatformString, XboxLiveRestrictedPlatformString }),
+		InNormalFont,
+		EAlignmentType::Left,
+		Color::UIBackgroundGrey
+		);
+	RestrictedPlatformsDropDown->SetBorderColor(Color::UIBorderGrey);
+	RestrictedPlatformsDropDown->SetOnSelectionCallback([this](const std::wstring& Selection)
+	{
+		OnSessionRestrictedPlatformSelected(Selection);
+	});
+
 	MaxPlayersDropDown = std::make_shared<FDropDownList>(
 		SessionLevelDropDown->GetPosition() + Vector2(DropDownListsSize.x  + 10.0f, 0.0f),
 		DropDownListsSize,
@@ -92,7 +131,6 @@ FNewSessionDialog::FNewSessionDialog(Vector2 InPos,
 	{
 		OnSessionMaxPlayersNumSelected(Selection);
 	});
-	//AddWidget(MaxPlayersDropDown);
 
 	JoinInProgressCheckbox = std::make_shared<FCheckboxWidget>(
 		SessionLevelDropDown->GetPosition() + Vector2(0.0f, SessionLevelDropDown->GetSize().y + 5.0f),
@@ -173,6 +211,7 @@ FNewSessionDialog::FNewSessionDialog(Vector2 InPos,
 	//Dropdown lists have to be last widgets in the list otherwise they will overlap with other widgets when expanded on DX platform.
 	//This is temporary workaround (hack).
 	//TODO: fix DX render to use UI Layer value correctly
+	AddWidget(RestrictedPlatformsDropDown);
 	AddWidget(SessionLevelDropDown);
 	AddWidget(MaxPlayersDropDown);
 }
@@ -194,8 +233,9 @@ void FNewSessionDialog::SetPosition(Vector2 Pos)
 
 	SessionLevelDropDown->SetPosition(SessionNameField->GetPosition() + Vector2(0.0f, SessionNameField->GetSize().y + 10.0f));
 	MaxPlayersDropDown->SetPosition(SessionLevelDropDown->GetPosition() + Vector2(DropDownListsSize.x + 10.0f, 0.0f));
+	RestrictedPlatformsDropDown->SetPosition(SessionLevelDropDown->GetPosition() + Vector2(0.0f, SessionLevelDropDown->GetSize().y + 5.0f));
 
-	JoinInProgressCheckbox->SetPosition(SessionLevelDropDown->GetPosition() + Vector2(0.0f, SessionLevelDropDown->GetSize().y + 5.0f));
+	JoinInProgressCheckbox->SetPosition(RestrictedPlatformsDropDown->GetPosition() + Vector2(0.0f, SessionLevelDropDown->GetSize().y + 5.0f));
 	PublicCheckbox->SetPosition(JoinInProgressCheckbox->GetPosition() + Vector2(JoinInProgressCheckbox->GetSize().x + 10.f, 0.0f));
 	PresenceSessionCheckbox->SetPosition(JoinInProgressCheckbox->GetPosition() + Vector2(0.0f, JoinInProgressCheckbox->GetSize().y + 10.0f));
 	InvitesAllowedCheckbox->SetPosition(PresenceSessionCheckbox->GetPosition() + Vector2(PresenceSessionCheckbox->GetSize().x + 10.0f, 0.0f));
@@ -210,6 +250,7 @@ void FNewSessionDialog::Create()
 
 	SessionLevelDropDown->SetParent(std::weak_ptr<FDialog>(std::static_pointer_cast<FDialog>(shared_from_this())));
 	MaxPlayersDropDown->SetParent(std::weak_ptr<FDialog>(std::static_pointer_cast<FDialog>(shared_from_this())));
+	RestrictedPlatformsDropDown->SetParent(std::weak_ptr<FDialog>(std::static_pointer_cast<FDialog>(shared_from_this())));
 }
 
 void FNewSessionDialog::Show()
@@ -274,6 +315,11 @@ void FNewSessionDialog::CreateSessionPressed()
 	Session.MaxPlayers = atoi(FStringUtils::Narrow(MaxPlayersString).data());
 	Session.Name = FStringUtils::Narrow(SessionName);
 	Session.PermissionLevel = (PublicCheckbox->IsTicked()) ? EOS_EOnlineSessionPermissionLevel::EOS_OSPF_PublicAdvertised : EOS_EOnlineSessionPermissionLevel::EOS_OSPF_InviteOnly;
+
+	if (bSessionRestrictedPlatformSelected)
+	{
+		Session.RestrictedPlatform = RestrictedPlatformTypeForString(RestrictedPlatformsDropDown->GetCurrentSelection());
+	}
 
 	FSession::Attribute Attribute;
 	Attribute.Key = "Level";

@@ -65,7 +65,7 @@ EOS_EResult FVoiceRequestJoin::MakeRequest(EOS_HRTCAdmin RTCAdminHandle)
 		{
 			if (Data->ResultCode == EOS_EResult::EOS_Success)
 			{
-				FDebugLog::Log(L"FVoiceRequestJoin (%x) - Completed successfully for room %s", Request, FStringUtils::Widen(Data->RoomName).c_str());
+				FDebugLog::Log(L"FVoiceRequestJoin (%x) - Completed successfully for room %ls", Request, FStringUtils::Widen(Data->RoomName).c_str());
 
 				FJoinRoomResult Result{ };
 				Result.Result = Data->ResultCode;

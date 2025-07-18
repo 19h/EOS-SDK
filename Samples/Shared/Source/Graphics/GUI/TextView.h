@@ -126,6 +126,12 @@ public:
 	/** Enable Scroller */
 	void EnableScroller();
 
+	/** Returns true if we have only one line that matches the initial text */
+	bool HasInitialText() const;
+
+	/** Returns true if we have no text lines */
+	bool IsEmpty() const;
+
 protected:
 	/** Create Scroller */
 	void CreateScroller();

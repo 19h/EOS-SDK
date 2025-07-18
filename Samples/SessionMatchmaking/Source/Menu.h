@@ -22,6 +22,7 @@ class FSessionMatchmakingDialog;
 class FSessionInviteReceivedDialog;
 class FNewSessionDialog;
 class FPopupDialog;
+class FRequestToJoinSessionReceivedDialog;
 
 /**
 * In-Game Menu
@@ -85,6 +86,11 @@ private:
 	void CreateNewSessionDialog();
 
 	/**
+	* Creates and hides the popup dialog for request to join session
+	*/
+	void CreateRequestToJoinSessionDialog();
+
+	/**
 	 * Updates friends dialog to match session matchmaking dialog. 
 	 */
 	void UpdateFriendsDialogTransform(const Vector2 WindowSize);
@@ -97,4 +103,7 @@ private:
 
 	/** Dialog with session settings */
 	std::shared_ptr<FNewSessionDialog> NewSessionDialog;
+
+	/** Request to Join Session received dialog */
+	std::shared_ptr<FRequestToJoinSessionReceivedDialog> RequestToJoinSessionDialog;
 };

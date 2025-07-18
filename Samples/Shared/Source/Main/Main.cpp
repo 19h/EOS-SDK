@@ -24,6 +24,10 @@
 #include "Steam/SteamManager.h"
 #endif
 
+#if ALLOW_RESERVED_OPTIONS
+#include "ReservedInitializeOptions.h"
+#endif
+
 /**
 * Callback function to use for EOS SDK log messages
 *
@@ -110,7 +114,11 @@ void FMain::InitPlatform()
 	SDKOptions.ReleaseMemoryFunction = nullptr;
 	SDKOptions.ProductName = SampleConstants::GameName;
 	SDKOptions.ProductVersion = "1.0";
+#if ALLOW_RESERVED_OPTIONS
+	SetReservedInitializeOptions(SDKOptions);
+#else
 	SDKOptions.Reserved = nullptr;
+#endif
 	SDKOptions.SystemInitializeOptions = nullptr;
 	SDKOptions.OverrideThreadAffinity = nullptr;
 

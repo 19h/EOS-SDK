@@ -182,9 +182,19 @@ private:
 	void GetAudioInputDevices();
 
 	/**
+	 * Update list available audio input devices
+	 */
+	void UpdateAudioInputDevices();
+
+	/**
 	 * Get available audio output devices
 	 */
 	void GetAudioOutputDevices();
+
+	/**
+	 * Update list available audio output devices
+	 */
+	void UpdateAudioOutputDevices();
 
 	/**
 	 * Requests joining a room via trusted server
@@ -352,6 +362,34 @@ private:
 	 * @param Data - out parameter
 	 */
 	static void EOS_CALL OnUpdateParticipantVolumeCb(const EOS_RTCAudio_UpdateParticipantVolumeCallbackInfo* Data);
+
+	/**
+	 * Callback that is fired on update list of input audio devices
+	 *
+	 * @param Data - out parameter
+	 */
+	static void EOS_CALL OnInputDevicesInformationCb(const EOS_RTCAudio_OnQueryInputDevicesInformationCallbackInfo* Data);
+
+	/**
+	 * Callback that is fired on update list of output audio devices
+	*
+	* @param Data - out parameter
+	*/
+	static void EOS_CALL OnOutputDevicesInformationCb(const EOS_RTCAudio_OnQueryOutputDevicesInformationCallbackInfo* Data);
+
+	/**
+	 * Callback that is fired on finish setting audio input device
+	*
+	* @param Data - out parameter
+	*/
+	static void EOS_CALL OnSetAudioInputDeviceCb(const EOS_RTCAudio_OnSetInputDeviceSettingsCallbackInfo* Data);
+
+	/**
+	 * Callback that is fired on finish setting audio output device
+	*
+	* @param Data - out parameter
+	*/
+	static void EOS_CALL OnSetAudioOutputDeviceCb(const EOS_RTCAudio_OnSetOutputDeviceSettingsCallbackInfo* Data);
 
 	/** Handle to EOS SDK RTC system */
 	EOS_HRTC RTCHandle;

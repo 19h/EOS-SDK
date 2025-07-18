@@ -35,7 +35,7 @@
 #define _DEBUG
 #endif
 
-#if ALLOW_RESERVED_PLATFORM_OPTIONS
+#if ALLOW_RESERVED_OPTIONS
 #define DEV_BUILD
 #endif
 

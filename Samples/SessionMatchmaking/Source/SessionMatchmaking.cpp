@@ -15,6 +15,7 @@
 #include <eos_sessions.h>
 #include <eos_presence.h>
 #include <eos_ui.h>
+#include <eos_custominvites.h>
 
 #include <regex>
 
@@ -186,6 +187,7 @@ void FSessionMatchmaking::OnShutdown()
 {
 	DestroyAllSessions();
 	UnsubscribeFromGameInvites();
+	UnsubscribeFromLeaveSessionUI();
 }
 
 void FSessionMatchmaking::Update()
@@ -297,6 +299,12 @@ bool FSessionMatchmaking::CreateSession(const FSession& Session)
 	CreateOptions.LocalUserId = Player->GetProductUserID();
 	CreateOptions.bPresenceEnabled = Session.bPresenceSession;
 	CreateOptions.bSanctionsEnabled = EOS_FALSE;
+	if (Session.RestrictedPlatform != ERestrictedPlatformType::Unrestricted)
+	{
+		RestrictedPlatform = static_cast<uint32_t>(Session.RestrictedPlatform);
+		CreateOptions.AllowedPlatformIds = &RestrictedPlatform;
+		CreateOptions.AllowedPlatformIdsCount = 1;
+	}
 
 	EOS_HSessionModification ModificationHandle = NULL;
 	EOS_EResult CreateResult = EOS_Sessions_CreateSessionModification(SessionsHandle, &CreateOptions, &ModificationHandle);
@@ -506,6 +514,24 @@ bool FSessionMatchmaking::IsPresenceSession(const std::string& Id) const
 	return HasPresenceSession() && Id == KnownPresenceSessionId;
 }
 
+const FSession* FSessionMatchmaking::GetPresenceSession() const
+{
+	if (!HasPresenceSession())
+	{
+		return nullptr;
+	}
+
+	for (const std::pair<const std::string, FSession>& CurrentSessionEntry : CurrentSessions)
+	{
+		if (CurrentSessionEntry.second.Id == KnownPresenceSessionId)
+		{
+			return &CurrentSessionEntry.second;
+		}
+	}
+
+	return nullptr;
+}
+
 const FSession& FSessionMatchmaking::GetSession(const std::string& Name)
 {
 	auto iter = CurrentSessions.find(Name);
@@ -616,6 +642,119 @@ void FSessionMatchmaking::InviteToSession(const std::string& Name, FProductUserI
 	}
 }
 
+void FSessionMatchmaking::RequestToJoinSession(const FProductUserId& FriendProductUserId)
+{
+	if (!FriendProductUserId.IsValid())
+	{
+		FDebugLog::LogError(L"Session Matchmaking - RequestToJoinSession: friend's product user id is invalid!");
+		return;
+	}
+
+	PlayerPtr Player = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser());
+	if (Player != nullptr)
+	{
+		FProductUserId CurrentProductUserId = Player->GetProductUserID();
+		if (!CurrentProductUserId.IsValid())
+		{
+			FDebugLog::LogError(L"Session Matchmaking - RequestToJoinSession: current user's product user id is invalid!");
+			return;
+		}
+
+		EOS_HCustomInvites CustomInvitesHandle = EOS_Platform_GetCustomInvitesInterface(FPlatform::GetPlatformHandle());
+		EOS_CustomInvites_SendRequestToJoinOptions Options = {};
+		Options.ApiVersion = EOS_CUSTOMINVITES_SENDREQUESTTOJOIN_API_LATEST;
+		Options.LocalUserId = Player->GetProductUserID();
+		Options.TargetUserId = FriendProductUserId;
+
+		EOS_CustomInvites_SendRequestToJoin(CustomInvitesHandle, &Options, nullptr, OnSendRequestToJoinCompleteCallback);
+	}
+	else
+	{
+		FDebugLog::LogError(L"Session Matchmaking - RequestToJoinSession: Current player is invalid!");
+	}
+}
+
+void FSessionMatchmaking::AcceptRequestToJoin(const FProductUserId& FriendProductUserId)
+{
+	if (!FriendProductUserId.IsValid())
+	{
+		FDebugLog::LogError(L"Session Matchmaking - AcceptRequestToJoin: friend's product user id is invalid!");
+		return;
+	}
+
+	const FSession* PresenceSession = GetPresenceSession();
+	if (PresenceSession == nullptr)
+	{
+		FDebugLog::LogError(L"Session Matchmaking - AcceptRequestToJoin: attempted to accept a request to join but there is no presence session available from which to send an invite. This request to join will not be deleted.");
+		return;
+	}
+
+	std::string PresenceSessionName = PresenceSession->Name;
+
+	if (PresenceSessionName.empty())
+	{
+		FDebugLog::LogError(L"Session Matchmaking - AcceptRequestToJoin: attempted to accept a request to join but there is no presence session available from which to send an invite. This request to join will not be deleted.");
+		return;
+	}
+
+	PlayerPtr Player = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser());
+	if (Player != nullptr)
+	{
+		FProductUserId CurrentProductUserId = Player->GetProductUserID();
+		if (!CurrentProductUserId.IsValid())
+		{
+			FDebugLog::LogError(L"Session Matchmaking - AcceptRequestToJoin: current user's product user id is invalid!");
+			return;
+		}
+
+		EOS_HCustomInvites CustomInvitesHandle = EOS_Platform_GetCustomInvitesInterface(FPlatform::GetPlatformHandle());
+		EOS_CustomInvites_AcceptRequestToJoinOptions Options = {};
+		Options.ApiVersion = EOS_CUSTOMINVITES_ACCEPTREQUESTTOJOIN_API_LATEST;
+		Options.LocalUserId = Player->GetProductUserID();
+		Options.TargetUserId = FriendProductUserId;
+
+		EOS_CustomInvites_AcceptRequestToJoin(CustomInvitesHandle, &Options, nullptr, OnSendRequestToJoinAcceptedCallback);
+
+		InviteToSession(PresenceSessionName, FriendProductUserId);
+	}
+	else
+	{
+		FDebugLog::LogError(L"Session Matchmaking - RequestToJoinSession: Current player is invalid!");
+	}
+}
+
+void FSessionMatchmaking::RejectRequestToJoin(const FProductUserId& FriendProductUserId)
+{
+	if (!FriendProductUserId.IsValid())
+	{
+		FDebugLog::LogError(L"Session Matchmaking - RejectRequestToJoin: friend's product user id is invalid!");
+		return;
+	}
+
+	PlayerPtr Player = FPlayerManager::Get().GetPlayer(FPlayerManager::Get().GetCurrentUser());
+	if (Player != nullptr)
+	{
+		FProductUserId CurrentProductUserId = Player->GetProductUserID();
+		if (!CurrentProductUserId.IsValid())
+		{
+			FDebugLog::LogError(L"Session Matchmaking - RejectRequestToJoin: current user's product user id is invalid!");
+			return;
+		}
+
+		EOS_HCustomInvites CustomInvitesHandle = EOS_Platform_GetCustomInvitesInterface(FPlatform::GetPlatformHandle());
+		EOS_CustomInvites_RejectRequestToJoinOptions Options = {};
+		Options.ApiVersion = EOS_CUSTOMINVITES_REJECTREQUESTTOJOIN_API_LATEST;
+		Options.LocalUserId = Player->GetProductUserID();
+		Options.TargetUserId = FriendProductUserId;
+
+		EOS_CustomInvites_RejectRequestToJoin(CustomInvitesHandle, &Options, nullptr, OnSendRequestToJoinRejectedCallback);
+	}
+	else
+	{
+		FDebugLog::LogError(L"Session Matchmaking - RejectRequestToJoin: Current player is invalid!");
+	}
+}
+
 void FSessionMatchmaking::SetInviteSession(const FSession& Session, SessionDetailsKeeper SessionHandle)
 {
 	CurrentInviteSession = Session;
@@ -626,6 +765,7 @@ void FSessionMatchmaking::SubscribeToGameInvites()
 {
 	EOS_HSessions SessionsHandle = EOS_Platform_GetSessionsInterface(FPlatform::GetPlatformHandle());
 	EOS_HPresence PresenceHandle = EOS_Platform_GetPresenceInterface(FPlatform::GetPlatformHandle());
+	EOS_HCustomInvites CustomInvitesHandle = EOS_Platform_GetCustomInvitesInterface(FPlatform::GetPlatformHandle());
 
 	EOS_Sessions_AddNotifySessionInviteReceivedOptions InviteNotifyOptions = {};
 	InviteNotifyOptions.ApiVersion = EOS_SESSIONS_ADDNOTIFYSESSIONINVITERECEIVED_API_LATEST;
@@ -635,6 +775,10 @@ void FSessionMatchmaking::SubscribeToGameInvites()
 	InviteAcceptOptions.ApiVersion = EOS_SESSIONS_ADDNOTIFYSESSIONINVITEACCEPTED_API_LATEST;
 	SessionInviteAcceptedNotificationHandle = EOS_Sessions_AddNotifySessionInviteAccepted(SessionsHandle, &InviteAcceptOptions, nullptr, OnSessionInviteAcceptedCallback);
 
+	EOS_Sessions_AddNotifySessionInviteRejectedOptions InviteRejectOptions = {};
+	InviteRejectOptions.ApiVersion = EOS_SESSIONS_ADDNOTIFYSESSIONINVITEREJECTED_API_LATEST;
+	SessionInviteRejectedNotificationHandle = EOS_Sessions_AddNotifySessionInviteRejected(SessionsHandle, &InviteRejectOptions, nullptr, OnSessionInviteRejectedCallback);
+
 	EOS_Presence_AddNotifyJoinGameAcceptedOptions JoinGameAcceptedOptions = {};
 	JoinGameAcceptedOptions.ApiVersion = EOS_PRESENCE_ADDNOTIFYJOINGAMEACCEPTED_API_LATEST;
 	JoinGameNotificationHandle = EOS_Presence_AddNotifyJoinGameAccepted(PresenceHandle, &JoinGameAcceptedOptions, nullptr, OnPresenceJoinGameAcceptedCallback);
@@ -642,6 +786,10 @@ void FSessionMatchmaking::SubscribeToGameInvites()
 	EOS_Sessions_AddNotifyJoinSessionAcceptedOptions SessionJoinSessionAcceptedOptions = {};
 	SessionJoinSessionAcceptedOptions.ApiVersion = EOS_SESSIONS_ADDNOTIFYJOINSESSIONACCEPTED_API_LATEST;
 	SessionJoinGameNotificationHandle = EOS_Sessions_AddNotifyJoinSessionAccepted(SessionsHandle, &SessionJoinSessionAcceptedOptions, nullptr, OnSessionsJoinSessionAcceptedCallback);
+
+	EOS_CustomInvites_AddNotifyRequestToJoinReceivedOptions RequestToJoinSessionReceivedOptions = {};
+	RequestToJoinSessionReceivedOptions.ApiVersion = EOS_CUSTOMINVITES_ADDNOTIFYREQUESTTOJOINRECEIVED_API_LATEST;
+	RequestToJoinSessionReceivedNotificationHandle = EOS_CustomInvites_AddNotifyRequestToJoinReceived(CustomInvitesHandle, &RequestToJoinSessionReceivedOptions, nullptr, OnRequestToJoinSessionReceivedCallback);
 }
 
 void FSessionMatchmaking::UnsubscribeFromGameInvites()
@@ -659,6 +807,11 @@ void FSessionMatchmaking::UnsubscribeFromGameInvites()
 		EOS_Sessions_RemoveNotifySessionInviteAccepted(SessionsHandle, SessionInviteAcceptedNotificationHandle);
 		SessionInviteAcceptedNotificationHandle = EOS_INVALID_NOTIFICATIONID;
 	}
+	if (SessionInviteRejectedNotificationHandle != EOS_INVALID_NOTIFICATIONID)
+	{
+		EOS_Sessions_RemoveNotifySessionInviteRejected(SessionsHandle, SessionInviteRejectedNotificationHandle);
+		SessionInviteRejectedNotificationHandle = EOS_INVALID_NOTIFICATIONID;
+	}
 	if (JoinGameNotificationHandle != EOS_INVALID_NOTIFICATIONID)
 	{
 		EOS_Presence_RemoveNotifyJoinGameAccepted(PresenceHandle, JoinGameNotificationHandle);
@@ -668,6 +821,24 @@ void FSessionMatchmaking::UnsubscribeFromGameInvites()
 	{
 		EOS_Sessions_RemoveNotifyJoinSessionAccepted(SessionsHandle, SessionJoinGameNotificationHandle);
 		SessionJoinGameNotificationHandle = EOS_INVALID_NOTIFICATIONID;
+	}
+}
+
+void FSessionMatchmaking::SubscribeToLeaveSessionUI()
+{
+	EOS_HSessions SessionsHandle = EOS_Platform_GetSessionsInterface(FPlatform::GetPlatformHandle());
+
+	EOS_Sessions_AddNotifyLeaveSessionRequestedOptions LeaveSessionRequestedOptions = { };
+	LeaveSessionRequestedOptions.ApiVersion = EOS_SESSIONS_ADDNOTIFYLEAVESESSIONREQUESTED_API_LATEST;
+	LeaveSessionRequestedNotificationHandle = EOS_Sessions_AddNotifyLeaveSessionRequested(SessionsHandle, &LeaveSessionRequestedOptions, nullptr, OnLeaveSessionRequestedCallback);
+}
+
+void FSessionMatchmaking::UnsubscribeFromLeaveSessionUI()
+{
+	if (LeaveSessionRequestedNotificationHandle != EOS_INVALID_NOTIFICATIONID)
+	{
+		EOS_Sessions_RemoveNotifyLeaveSessionRequested(EOS_Platform_GetSessionsInterface(FPlatform::GetPlatformHandle()), LeaveSessionRequestedNotificationHandle);
+		LeaveSessionRequestedNotificationHandle = EOS_INVALID_NOTIFICATIONID;
 	}
 }
 
@@ -1547,7 +1718,7 @@ void EOS_CALL FSessionMatchmaking::OnSessionInviteReceivedCallback(const EOS_Ses
 				FGame::Get().GetSessions()->SetInviteSession(InviteSession, SessionDetails);
 
 				//Show popup
-				FGameEvent Event(EGameEventType::InviteToSessionReceived, FStringUtils::Widen(Data->InviteId));
+				FGameEvent Event(EGameEventType::InviteToSessionReceived, Data->TargetUserId, FStringUtils::Widen(Data->InviteId));
 				FGame::Get().OnGameEvent(Event);
 			}
 			else
@@ -1566,8 +1737,7 @@ void EOS_CALL FSessionMatchmaking::OnSessionInviteAcceptedCallback(const EOS_Ses
 {
 	if (Data)
 	{
-		FDebugLog::Log(L"Session Matchmaking: invite to session accepted. Session id: %ls", FStringUtils::Widen(Data->SessionId).c_str());
-		FDebugLog::Log(L"Session Matchmaking: invite to session accepted. Invite id: %ls", FStringUtils::Widen(Data->InviteId).c_str());
+		FDebugLog::Log(L"Session Matchmaking: invite to session accepted. Session id: %ls; Invite id: %ls", FStringUtils::Widen(Data->SessionId).c_str(), FStringUtils::Widen(Data->InviteId).c_str());
 
 		//Hide popup
 		FGameEvent Event(EGameEventType::OverlayInviteToSessionAccepted);
@@ -1583,6 +1753,107 @@ void EOS_CALL FSessionMatchmaking::OnSessionInviteAcceptedCallback(const EOS_Ses
 			FDebugLog::LogError(L"Session Matchmaking (OnSessionInviteReceivedCallback): Could not get session details by invite id %ls.", FStringUtils::Widen(Data->InviteId).c_str());
 		}
 	}
+}
+
+void EOS_CALL FSessionMatchmaking::OnSessionInviteRejectedCallback(const EOS_Sessions_SessionInviteRejectedCallbackInfo* Data)
+{
+	if (Data)
+	{
+		FDebugLog::Log(L"Session Matchmaking: invite to session rejected. Session id: %ls; Invite id: %ls", FStringUtils::Widen(Data->SessionId).c_str(), FStringUtils::Widen(Data->InviteId).c_str());
+
+		//Hide popup
+		FGameEvent Event(EGameEventType::OverlayInviteToSessionAccepted);
+		FGame::Get().OnGameEvent(Event);
+	}
+}
+
+void EOS_CALL FSessionMatchmaking::OnSendRequestToJoinCompleteCallback(const EOS_CustomInvites_SendRequestToJoinCallbackInfo* Data)
+{
+	if (Data == nullptr)
+	{
+		FDebugLog::LogError(L"Session Matchmaking (OnSendRequestToJoinCompleteCallback): EOS_CustomInvites_SendRequestToJoinCallbackInfo is null");
+	}
+
+	if (!EOS_EResult_IsOperationComplete(Data->ResultCode))
+	{
+		FDebugLog::Log(L"Session Matchmaking (OnSendRequestToJoinCompleteCallback): operation not complete: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+	}
+	else if (Data->ResultCode != EOS_EResult::EOS_Success)
+	{
+		FDebugLog::LogError(L"Session Matchmaking (OnSendRequestToJoinCompleteCallback): error code: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+	}
+	else
+	{
+		FDebugLog::Log(L"Session Matchmaking: request to join session sent successfully.");
+	}
+}
+
+void EOS_CALL FSessionMatchmaking::OnSendRequestToJoinAcceptedCallback(const EOS_CustomInvites_AcceptRequestToJoinCallbackInfo* Data)
+{
+	if (Data == nullptr)
+	{
+		FDebugLog::LogError(L"Session Matchmaking (OnSendRequestToJoinAcceptedCallback): EOS_CustomInvites_SendRequestToJoinCallbackInfo is null");
+		return;
+	}
+
+	if (!EOS_EResult_IsOperationComplete(Data->ResultCode))
+	{
+		FDebugLog::Log(L"Session Matchmaking (OnSendRequestToJoinAcceptedCallback): operation not complete: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+	}
+	else if (Data->ResultCode != EOS_EResult::EOS_Success)
+	{
+		FDebugLog::LogError(L"Session Matchmaking (OnSendRequestToJoinAcceptedCallback): error code: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+	}
+	else
+	{
+		FDebugLog::Log(L"Session Matchmaking: request to join session accepted successfully.");
+	}
+}
+
+void EOS_CALL FSessionMatchmaking::OnSendRequestToJoinRejectedCallback(const EOS_CustomInvites_RejectRequestToJoinCallbackInfo* Data)
+{
+	if (Data == nullptr)
+	{
+		FDebugLog::LogError(L"Session Matchmaking (OnSendRequestToJoinRejectedCallback): EOS_CustomInvites_RejectRequestToJoinCallbackInfo is null");
+		return;
+	}
+
+	if (!EOS_EResult_IsOperationComplete(Data->ResultCode))
+	{
+		FDebugLog::Log(L"Session Matchmaking (OnSendRequestToJoinRejectedCallback): operation not complete: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+	}
+	else if (Data->ResultCode != EOS_EResult::EOS_Success)
+	{
+		FDebugLog::LogError(L"Session Matchmaking (OnSendRequestToJoinRejectedCallback): error code: %ls", FStringUtils::Widen(EOS_EResult_ToString(Data->ResultCode)).c_str());
+	}
+	else
+	{
+		FDebugLog::Log(L"Session Matchmaking: request to join session rejected successfully.");
+	}
+}
+
+void EOS_CALL FSessionMatchmaking::OnRequestToJoinSessionReceivedCallback(const EOS_CustomInvites_RequestToJoinReceivedCallbackInfo* Data)
+{
+	if (Data == nullptr)
+	{
+		FDebugLog::Log(L"Session Matchmaking: request to join received callback invoked but the callback data was not set.");
+		return;
+	}
+
+	FDebugLog::Log(L"Session Matchmaking: request to join received.");
+
+	const FSession* PresenceSession = FGame::Get().GetSessions()->GetPresenceSession();
+
+	if (PresenceSession == nullptr)
+	{
+		FDebugLog::LogError(L"Session Matchmaking: request to join received but there is no presence session.");
+		FGame::Get().GetSessions()->RejectRequestToJoin(Data->FromUserId);
+		return;
+	}
+
+	//Show popup
+	FGameEvent Event(EGameEventType::RequestToJoinSessionReceived, Data->FromUserId);
+	FGame::Get().OnGameEvent(Event);
 }
 
 void EOS_CALL FSessionMatchmaking::OnJoinSessionCallback(const EOS_Sessions_JoinSessionCallbackInfo* Data)
@@ -1657,4 +1928,17 @@ void EOS_CALL FSessionMatchmaking::OnSetPresenceCallback(const EOS_Presence_SetP
 		FDebugLog::Log(L"Session Matchmaking: set presence successfully.");
 	}
 
+}
+
+void EOS_CALL FSessionMatchmaking::OnLeaveSessionRequestedCallback(const EOS_Sessions_LeaveSessionRequestedCallbackInfo* Data)
+{
+	if (Data)
+	{
+		FDebugLog::Log(L"Session Matchmaking: leave session requested for session = %ls", FStringUtils::Widen(Data->SessionName).c_str());
+		FGame::Get().GetSessions()->DestroySession(Data->SessionName);
+	}
+	else
+	{
+		FDebugLog::LogError(L"Session Matchmaking (OnLeaveSessionRequestedCallback): EOS_Sessions_LeaveSessionRequestedCallbackInfo is null");
+	}
 }

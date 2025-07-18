@@ -78,6 +78,9 @@ private:
 	/** Button two */
 	std::shared_ptr<FButtonWidget> Button2;
 
+	/** Button three */
+	std::shared_ptr<FButtonWidget> Button3;
+
 	/** Large Font */
 	FontPtr LargeFont;
 

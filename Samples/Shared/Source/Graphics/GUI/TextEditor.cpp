@@ -108,10 +108,22 @@ void FTextEditorWidget::SetFocused(bool bValue)
 	if (!bValue)
 	{
 		StopEditing();
+
+		if (IsEmpty())
+		{
+			Reset();
+		}
 	}
-	else if(!bFocused && !EditingLine->IsShown())
+	else 
 	{
-		ChangeEditingLine(0);
+		if (HasInitialText())
+		{
+			Clear();
+		}
+		else if (!bFocused && !EditingLine->IsShown())
+		{
+			ChangeEditingLine(0);
+		}
 	}
 }
 
@@ -419,7 +431,7 @@ void FTextEditorWidget::OnUIEvent(const FUIEvent& Event)
 				if (EditingLine->GetCursorPosition() == (EditingLine->GetText().size()))
 				{
 					//Take contents of next line and append it to current one
-					if (FirstSelectedLine != (Lines.Num() - 1))
+					if (!Lines.IsEmpty() && FirstSelectedLine != (Lines.Num() - 1))
 					{
 						Lines[FirstSelectedLine] = FColoredLine(EditingLine->GetText() + Lines[FirstSelectedLine + 1].GetMessage(), Lines[FirstSelectedLine + 1].GetColor());
 						EditingLine->SetText(Lines[FirstSelectedLine].GetMessage());
@@ -446,7 +458,7 @@ void FTextEditorWidget::OnUIEvent(const FUIEvent& Event)
 					//Take contents of current line and append it to previous one
 					std::wstring CurrentLineText = EditingLine->GetText();
 					
-					if (FirstSelectedLine > 0)
+					if (!Lines.IsEmpty() && FirstSelectedLine > 0)
 					{
 						size_t PrevLineLength = Lines[FirstSelectedLine - 1].GetMessage().size();
 						Lines[FirstSelectedLine - 1].GetMessage().append(CurrentLineText);

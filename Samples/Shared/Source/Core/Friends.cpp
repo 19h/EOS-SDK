@@ -40,7 +40,7 @@ void FFriends::Update()
 		return;
 	}
 
-	//Do we need to update mappings?
+	// Do we need to update mappings?
 	bool bThereAreStillMissingProductUserIds = false;
 	for (FFriendData& Friend : Friends)
 	{
@@ -48,7 +48,7 @@ void FFriends::Update()
 		{
 			Friend.UserProductUserId = FGame::Get().GetUsers()->GetExternalAccountMapping(Friend.UserId);
 
-			//Still missing?
+			// Still missing?
 			if (!Friend.UserProductUserId.IsValid())
 			{
 				bThereAreStillMissingProductUserIds = true;
@@ -220,18 +220,18 @@ void FFriends::SetFriends(EOS_EpicAccountId LocalUserId, std::vector<FFriendData
 {
 	if (LocalUserId == CurrentUserId)
 	{
-		//check if we can reuse user data from last time
+		// check if we can reuse user data from last time
 		for (FFriendData& NextFriend : InFriends)
 		{
 			auto Iter = std::find_if(Friends.begin(), Friends.end(), [NextFriend](const FFriendData& FriendEntry) { return FriendEntry.UserId == NextFriend.UserId; });
 			if (Iter != Friends.end())
 			{
-				//copy previously cached data
+				// copy previously cached data
 				NextFriend.Name = Iter->Name;
 			}
 			else
 			{
-				//query friend info
+				// query friend info
 				QueryUserInfo(LocalUserId, NextFriend.UserId);
 			}
 		}
@@ -247,6 +247,21 @@ void FFriends::SetFriends(EOS_EpicAccountId LocalUserId, std::vector<FFriendData
 
 		bInitialFriendQueryFinished = true;
 	}
+}
+
+void FFriends::CreateFriendData(EOS_EpicAccountId LocalUserId, EOS_EpicAccountId TargetUserId)
+{
+	FFriendData RetrievedFriendData;
+	RetrievedFriendData.LocalUserId = LocalUserId;
+	RetrievedFriendData.UserId = TargetUserId;
+
+	FUserData RetrievedUserData = FGame::Get().GetUsers()->CreateUserData(LocalUserId, TargetUserId);
+	if (RetrievedUserData.IsValid())
+	{
+		RetrievedFriendData.Name = RetrievedUserData.Name;
+	}
+	// OnUserInfoRetrieved handles adding or updating friend data
+	FGame::Get().GetFriends()->OnUserInfoRetrieved(RetrievedFriendData);
 }
 
 void FFriends::SubscribeToFriendStatusUpdates(void* Owner, std::function<void(const std::vector<FFriendData>&)> Callback)
@@ -298,7 +313,7 @@ void FFriends::OnUserFound(const FFriendData& FriendData)
 		AddFriend(FriendData.LocalUserId, FriendData.UserId);
 		break;
 	default:
-		//no action, do nothing
+		// no action, do nothing
 		break;
 	}
 
@@ -427,7 +442,7 @@ void FFriends::FriendStatusChanged(FEpicAccountId LocalUserId, FEpicAccountId Ta
 				}
 			}
 
-			//No such friend, need to refresh list (must be new friend?) unless initial friend query is not finished yet.
+			// No such friend, need to refresh list (must be new friend?) unless initial friend query is not finished yet.
 			if (!bFoundFriend && bInitialFriendQueryFinished)
 			{
 				QueryFriends(LocalUserId);
@@ -681,33 +696,7 @@ void EOS_CALL FFriends::QueryUserInfoCompleteCallbackFn(const EOS_UserInfo_Query
 	FUserInfoQueryPayload* UserInfoQueryData = (FUserInfoQueryPayload*)(FriendData->ClientData);
 	FDebugLog::Log(L"[EOS SDK] Query User Info Complete - User ID: %ls", FEpicAccountId(UserInfoQueryData->TargetUserId).ToString().c_str());
 
-	EOS_HUserInfo UserInfoInterface = EOS_Platform_GetUserInfoInterface(FPlatform::GetPlatformHandle());
-	EOS_UserInfo_CopyUserInfoOptions Options = {};
-	Options.ApiVersion = EOS_USERINFO_COPYUSERINFO_API_LATEST;
-	Options.LocalUserId = FriendData->LocalUserId;
-	Options.TargetUserId = UserInfoQueryData->TargetUserId;
-
-	EOS_UserInfo* UserInfo = nullptr;
-
-	auto Result = EOS_UserInfo_CopyUserInfo(UserInfoInterface, &Options, &UserInfo);
-
-	if (UserInfo && Result == EOS_EResult::EOS_Success)
-	{
-		std::wstring DisplayName = L"";
-		if (UserInfo->DisplayName)
-		{
-			DisplayName = FStringUtils::Widen(UserInfo->DisplayName);
-		}
-
-		FFriendData RetrievedFriendData;
-		RetrievedFriendData.LocalUserId = FriendData->LocalUserId;
-		RetrievedFriendData.UserId = UserInfoQueryData->TargetUserId;
-		RetrievedFriendData.Name = DisplayName;
-
-		FGame::Get().GetFriends()->OnUserInfoRetrieved(RetrievedFriendData);
-
-		EOS_UserInfo_Release(UserInfo);
-	}
+	FGame::Get().GetFriends()->CreateFriendData(FriendData->LocalUserId, UserInfoQueryData->TargetUserId);
 
 	delete UserInfoQueryData;
 }
@@ -720,7 +709,7 @@ void EOS_CALL FFriends::QueryUserInfoByDisplayNameCompleteCallbackFn(const EOS_U
 	{
 		FDebugLog::LogError(L"[EOS SDK] Query User Info error: %ls", FStringUtils::Widen(EOS_EResult_ToString(FriendData->ResultCode)).c_str());
 
-		//send placeholder friend to show it was not found
+		// send placeholder friend to show it was not found
 		FFriendData NotFoundUserInfo;
 		NotFoundUserInfo.Name = FStringUtils::Widen(std::string(FriendData->DisplayName) + " NOT FOUND");
 		NotFoundUserInfo.Status = EOS_EFriendsStatus::EOS_FS_NotFriends;
@@ -805,7 +794,7 @@ void EOS_CALL FFriends::PresenceUpdateCallback(const EOS_Presence_PresenceChange
 {
 	if (Data)
 	{
-		//Query presence info
+		// Query presence info
 		FGame::Get().GetUsers()->QueryPresenceInfo(Data->LocalUserId, Data->PresenceUserId);
 	}
 }

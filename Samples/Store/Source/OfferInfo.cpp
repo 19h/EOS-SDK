@@ -22,21 +22,28 @@ FOfferInfoWidget::FOfferInfoWidget(Vector2 InfoPos,
 									 UILayer InfoLayer,
 									 FOfferData InOfferData,
 									 FontPtr InfoLargeFont,
-									 FontPtr InfoSmallFont) :
+									 FontPtr InfoSmallFont,
+									 const FOfferInfoButtonParams& InfoButtonParams) :
 	IWidget(InfoPos, InfoSize, InfoLayer),
 	OfferData(InOfferData),
 	LargeFont(InfoLargeFont),
-	SmallFont(InfoSmallFont)
+	SmallFont(InfoSmallFont),
+	ButtonParams(InfoButtonParams)
 {
 	BackgroundImage = std::make_shared<FSpriteWidget>(Vector2(0.f, 0.f), Vector2(200.f, 100.f), InfoLayer, L"Assets/friendback.dds");
 }
 
 void FOfferInfoWidget::Create()
 {
-	BackgroundImage->Create();
+	if (ButtonParams.ButtonName.empty() || !ButtonParams.OnButtonClicked)
+		return;
 
-	Button1.reset();
-	Button2.reset();
+	if (BackgroundImage)
+	{
+		BackgroundImage->Create();
+	}
+
+	Button.reset();
 
 	bool bHasPrice = true; //  OfferData.bPriceValid;
 
@@ -65,30 +72,39 @@ void FOfferInfoWidget::Create()
 		const Vector2 ButtonSize = Vector2(PurchaseButtonSizeX, Size.y / 2.0f);
 		const Vector2 LeftButtonOffset((Size.x - ButtonSize.x - 5.0f) , Size.y * 0.25f);
 
-		std::string OfferId = OfferData.Id;
-
-		Button1 = std::make_shared<FButtonWidget>(
+		Button = std::make_shared<FButtonWidget>(
 			Position + LeftButtonOffset,
 			ButtonSize,
 			Layer - 1,
-			L"Checkout",
+			ButtonParams.ButtonName,
 			assets::DefaultButtonAssets,
 			SmallFont,
 			assets::DefaultButtonColors[0]);
-		Button1->SetBackgroundColors(assets::DefaultButtonColors);
-		Button1->Create();
-		Button1->SetOnPressedCallback([OfferId]() { FGame::Get().GetStore()->Checkout(OfferId); });
+		Button->SetBackgroundColors(assets::DefaultButtonColors);
+		Button->Create();
+		Button->SetOnPressedCallback([this]() { ButtonParams.OnButtonClicked(OfferData); });
 	}
 }
 
 void FOfferInfoWidget::Release()
 {
-	BackgroundImage->Release();
+	if (BackgroundImage)
+	{
+		BackgroundImage->Release();
+		// Do not need to reset the pointer because we can reuse the same object.
+	}
 
-	NameLabel->Release();
+	if (NameLabel)
+	{
+		NameLabel->Release();
+		NameLabel.reset();
+	}
 
-	Button1.reset();
-	Button2.reset();
+	if (Button)
+	{
+		Button->Release();
+		Button.reset();
+	}
 }
 
 void FOfferInfoWidget::Update()
@@ -96,21 +112,19 @@ void FOfferInfoWidget::Update()
 	if (!bShown)
 		return;
 
-	BackgroundImage->Update();
+	if (BackgroundImage)
+	{
+		BackgroundImage->Update();
+	}
 
 	if (NameLabel)
 	{
 		NameLabel->Update();
 	}
 
-	if (Button1)
+	if (Button)
 	{
-		Button1->Update();
-	}
-
-	if (Button2)
-	{
-		Button2->Update();
+		Button->Update();
 	}
 }
 
@@ -121,21 +135,19 @@ void FOfferInfoWidget::Render(FSpriteBatchPtr& Batch)
 
 	IWidget::Render(Batch);
 
-	BackgroundImage->Render(Batch);
+	if (BackgroundImage)
+	{
+		BackgroundImage->Render(Batch);
+	}
 
 	if (NameLabel)
 	{
 		NameLabel->Render(Batch);
 	}
 
-	if (Button1)
+	if (Button)
 	{
-		Button1->Render(Batch);
-	}
-
-	if (Button2)
-	{
-		Button2->Render(Batch);
+		Button->Render(Batch);
 	}
 }
 
@@ -146,8 +158,7 @@ void FOfferInfoWidget::DebugRender()
 
 	if (BackgroundImage) BackgroundImage->DebugRender();
 	if (NameLabel) NameLabel->DebugRender();
-	if (Button1) Button1->DebugRender();
-	if (Button2) Button2->DebugRender();
+	if (Button) Button->DebugRender();
 }
 #endif
 
@@ -158,13 +169,9 @@ void FOfferInfoWidget::OnUIEvent(const FUIEvent& event)
 
 	if (event.GetType() == EUIEventType::MousePressed || event.GetType() == EUIEventType::MouseReleased)
 	{
-		if (Button1 && Button1->CheckCollision(event.GetVector()))
+		if (Button && Button->CheckCollision(event.GetVector()))
 		{
-			Button1->OnUIEvent(event);
-		}
-		if (Button2 && Button2->CheckCollision(event.GetVector()))
-		{
-			Button2->OnUIEvent(event);
+			Button->OnUIEvent(event);
 		}
 	}
 }
@@ -187,9 +194,9 @@ void FOfferInfoWidget::SetPosition(Vector2 Pos)
 	const Vector2 ButtonSize = Vector2(PurchaseButtonSizeX, Size.y / 2.0f);
 	const Vector2 LeftButtonOffset((Size.x - ButtonSize.x - 5.0f), Size.y * 0.25f);
 
-	if (Button1)
+	if (Button)
 	{
-		Button1->SetPosition(Position + LeftButtonOffset);
+		Button->SetPosition(Position + LeftButtonOffset);
 	}
 }
 
@@ -201,10 +208,10 @@ void FOfferInfoWidget::SetSize(Vector2 NewSize)
 
 	if (NameLabel) NameLabel->SetSize(Vector2(NewSize.x, NameLabel->GetSize().y));
 
-	if (Button1)
+	if (Button)
 	{
 		const Vector2 ButtonSize = Vector2(PurchaseButtonSizeX, Size.y / 2.0f);
-		Button1->SetSize(ButtonSize);
+		Button->SetSize(ButtonSize);
 	}
 }
 

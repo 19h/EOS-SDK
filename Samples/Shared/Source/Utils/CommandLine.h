@@ -70,6 +70,9 @@ struct CommandLineConstants
 	/** Scopes EOS_AS_Email permission will be added when user logs in */
 	static constexpr wchar_t ScopesEmail[] = L"scopesemail";
 
+	/** Scopes EOS_AS_Country permission will be added when user logs in */
+	static constexpr wchar_t ScopesCountry[] = L"scopescountry";
+
 	/** Assets will be loaded from this directory */
 	static constexpr wchar_t AssetDir[] = L"assetdir";
 
@@ -144,6 +147,13 @@ public:
 	bool HasFlagParam(const std::wstring& Param);
 
 	/**
+	 * Gets the raw command line string.
+	 *
+	 * @return The raw command line string.
+	 */
+	const std::wstring& GetString() const;
+
+	/**
 	* Singleton
 	*/
 	static FCommandLine& Get();
@@ -165,4 +175,7 @@ private:
 	FCommandLine() = default;
 	/** Collections of command line arguments */
 	std::map<std::wstring, std::wstring> CommandLineArgs;
+
+	/** The raw command line string. */
+	std::wstring CommandLine;
 };

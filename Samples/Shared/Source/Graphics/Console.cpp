@@ -58,6 +58,21 @@ bool FConsole::AddCommand(const std::wstring& CmdStr, std::function<void(const s
 	return false;
 }
 
+bool FConsole::RunCommand(const std::wstring& CmdStr)
+{
+	std::vector<std::wstring> Args = FStringUtils::Split(CmdStr, L' ');
+
+	if (Args.size() > 0)
+	{
+		std::wstring Command = Args[0];
+		Args.erase(Args.begin());
+
+		return RunCommand(Command, Args);
+	}
+
+	return false;
+}
+
 bool FConsole::RunCommand(const std::wstring& CmdStr, const std::vector<std::wstring>& Args)
 {
 	std::wstring Command = FStringUtils::ToUpper(CmdStr);
