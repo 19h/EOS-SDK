@@ -220,18 +220,18 @@ void FFriends::SetFriends(EOS_EpicAccountId LocalUserId, std::vector<FFriendData
 {
 	if (LocalUserId == CurrentUserId)
 	{
-		// check if we can reuse user data from last time
+		// check if we can reuse user data from last time - if the display name from last time is still Pending, try to QueryInfo
 		for (FFriendData& NextFriend : InFriends)
 		{
 			auto Iter = std::find_if(Friends.begin(), Friends.end(), [NextFriend](const FFriendData& FriendEntry) { return FriendEntry.UserId == NextFriend.UserId; });
-			if (Iter != Friends.end())
+			if (Iter != Friends.end() && Iter->Name != L"Pending...")
 			{
 				// copy previously cached data
 				NextFriend.Name = Iter->Name;
 			}
-			else
+			else if(NextFriend.UserId.IsValid())
 			{
-				// query friend info
+				// query friend info only if the UserId is valid. We have a TESTFRIENDS command that passes Friends info without UserId. This check avoids errors.
 				QueryUserInfo(LocalUserId, NextFriend.UserId);
 			}
 		}
@@ -335,6 +335,9 @@ void FFriends::OnConnectLoggedIn(FProductUserId ProductUserId)
 	if (!CurrentProductUserId.IsValid())
 	{
 		CurrentProductUserId = ProductUserId;
+		// QueryFriends will end up calling EOS_Connect_QueryExternalAccountMappings and needs a valid local PUID
+		bInitialFriendQueryFinished = false;
+		QueryFriends(CurrentUserId);
 	}
 }
 
@@ -506,6 +509,14 @@ void FFriends::OnGameEvent(const FGameEvent& Event)
 			}
 		}
 	}
+	else if (Event.GetType() == EGameEventType::ExternalAccountsMappingRetrieved)
+	{
+		// SetFriends will end up calling EOS_UserInfo_CopyBestDisplayName. This can only be called after external account mappings are retrieved
+		if (const std::unique_ptr<FFriends>& FriendsPtr = FGame::Get().GetFriends())
+		{
+			FriendsPtr->SetFriends(CurrentUserId, std::move(Friends));
+		}
+	}
 	else if (Event.GetType() == EGameEventType::CancelLogin)
 	{
 		SetDirty();
@@ -597,7 +608,8 @@ void FFriends::SetCurrentUser(FEpicAccountId UserId)
 
 	bInitialFriendQueryFinished = false;
 
-	if (CurrentUserId.IsValid())
+	// QueryFriends calls EOS_Connect_QueryExternalAccountMapings which requires a valid local PUID
+	if (CurrentUserId.IsValid() && CurrentProductUserId.IsValid())
 	{
 		QueryFriends(CurrentUserId);
 	}
@@ -677,7 +689,8 @@ void EOS_CALL FFriends::QueryFriendsCompleteCallbackFn(const EOS_Friends_QueryFr
 
 	if (const std::unique_ptr<FFriends>& Friends = FGame::Get().GetFriends())
 	{
-		Friends->SetFriends(FriendData->LocalUserId, std::move(NewFriends));
+		// Friends list is incomplete at this time. The Name is set to "Pending". The Name will be set from SetFriends when QueryFriendsAccountMappings completes
+		Friends->Friends = NewFriends; 
 		Friends->QueryFriendsPresenceInfo(FriendData->LocalUserId);
 		Friends->QueryFriendsConnectMappings(FriendData->LocalUserId);
 	}
